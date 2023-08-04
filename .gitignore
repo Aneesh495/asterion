@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.agent-local/
+storage/
+runs/
+evidence/
+dist/
+build/
+.DS_Store
+*.tmp

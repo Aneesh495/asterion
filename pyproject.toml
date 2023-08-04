@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "asterion-md"
+version = "0.1.0"
+description = "Controlled-label equivariant molecular potentials and dynamics"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "torch==2.8.0", "numpy==2.2.6", "scipy==1.15.3", "e3nn==0.5.7",
+  "safetensors==0.6.2", "PyYAML==6.0.3", "matplotlib==3.10.6",
+]
+
+[dependency-groups]
+dev = ["pytest==8.4.2", "ruff==0.13.3", "mypy==1.18.2", "build==1.3.0"]
+
+[project.scripts]
+asterion = "asterion.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/asterion"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+check_untyped_defs = true
