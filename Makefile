@@ -5,10 +5,11 @@ CONFIG ?= configs/diagnostic.json
 DATA ?= storage
 EVIDENCE ?= evidence/$(RUN_ID)
 
-.PHONY: bootstrap doctor build test data train evaluate ablate stress bench docs demo acceptance verify release test-equivariance test-forces test-dynamics sample-efficiency acquire simulate
+.PHONY: bootstrap doctor build test data train evaluate ablate stress bench docs demo diagnostic acceptance verify release test-equivariance test-forces test-dynamics sample-efficiency acquire simulate controls properties derivatives analytic secondary reference
 bootstrap:
 	$(UV) sync --locked
-doctor build data train evaluate ablate stress bench docs demo acceptance verify release sample-efficiency acquire simulate:
+acceptance: CONFIG = configs/full.json
+doctor build data train evaluate ablate stress bench docs demo diagnostic acceptance verify release sample-efficiency acquire simulate controls properties derivatives analytic secondary reference:
 	$(UV) run --locked asterion $@ --config $(CONFIG) --storage $(DATA) --run-id $(RUN_ID) --evidence $(EVIDENCE)
 test:
 	$(UV) run --locked pytest

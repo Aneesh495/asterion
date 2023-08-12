@@ -1,0 +1,105 @@
+import os
+import shutil
+import tempfile
+from pathlib import Path
+
+import torch
+from safetensors.torch import load_file, save_file
+
+from asterion.artifacts.io import file_hash, object_hash, read_json, write_json
+from asterion.contracts.errors import IntegrityError
+from asterion.models.potential import ModelConfig, make_model
+
+
+def pack_tree(value, tensors: dict, prefix="state"):
+    if isinstance(value, torch.Tensor):
+        key = f"{prefix}.{len(tensors)}"
+        tensors[key] = value.detach().cpu().contiguous().clone()
+        return {"tensor": key}
+    if isinstance(value, dict):
+        return {
+            "mapping": [
+                [pack_tree(k, tensors, prefix), pack_tree(v, tensors, prefix)]
+                for k, v in value.items()
+            ]
+        }
+    if isinstance(value, (list, tuple)):
+        return {
+            "sequence": [pack_tree(v, tensors, prefix) for v in value],
+            "tuple": isinstance(value, tuple),
+        }
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    raise IntegrityError(f"unsupported checkpoint type {type(value)}")
+
+
+def unpack_tree(value, tensors):
+    if isinstance(value, dict):
+        if "tensor" in value:
+            return tensors[value["tensor"]]
+        if "mapping" in value:
+            return {unpack_tree(k, tensors): unpack_tree(v, tensors) for k, v in value["mapping"]}
+        if "sequence" in value:
+            items = [unpack_tree(v, tensors) for v in value["sequence"]]
+            return tuple(items) if value["tuple"] else items
+        raise IntegrityError("invalid checkpoint tree node")
+    return value
+
+
+def save_checkpoint(path: Path, model, optimizer, metadata: dict):
+    if path.exists():
+        raise IntegrityError("checkpoint generation already exists")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(prefix=path.name + ".", dir=path.parent))
+    try:
+        weights = {k: v.detach().cpu().contiguous().clone() for k, v in model.state_dict().items()}
+        save_file(weights, str(temporary / "model.safetensors"))
+        tensors: dict = {}
+        optimizer_tree = pack_tree(optimizer.state_dict() if optimizer is not None else {}, tensors)
+        tensors["rng.cpu"] = torch.random.get_rng_state().clone()
+        save_file(tensors, str(temporary / "state.safetensors"))
+        record = {
+            **metadata,
+            "architecture": model.config.to_dict(),
+            "optimizer": optimizer_tree,
+            "weights_sha256": file_hash(temporary / "model.safetensors"),
+            "state_sha256": file_hash(temporary / "state.safetensors"),
+            "format": "asterion-safe-checkpoint-v1",
+        }
+        record["identity"] = object_hash(record)
+        write_json(temporary / "checkpoint.json", record)
+        for file in temporary.iterdir():
+            with file.open("rb") as stream:
+                os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            shutil.rmtree(temporary)
+    return record
+
+
+def load_checkpoint(path: Path, device="cpu", dtype=torch.float64):
+    record = read_json(path / "checkpoint.json")
+    identity = record.pop("identity")
+    if record.get("format") != "asterion-safe-checkpoint-v1" or object_hash(record) != identity:
+        raise IntegrityError("checkpoint metadata identity mismatch")
+    record["identity"] = identity
+    for file, key in (
+        ("model.safetensors", "weights_sha256"),
+        ("state.safetensors", "state_sha256"),
+    ):
+        if file_hash(path / file) != record[key]:
+            raise IntegrityError("checkpoint tensor hash mismatch")
+    config = dict(record["architecture"])
+    config["elements"] = tuple(config["elements"])
+    model = make_model(ModelConfig(**config)).to(device=device, dtype=dtype)
+    model.load_state_dict(
+        load_file(str(path / "model.safetensors"), device=str(device)), strict=True
+    )
+    return model, record
+
+
+def restore_optimizer(path: Path, optimizer, record):
+    tensors = load_file(str(path / "state.safetensors"))
+    optimizer.load_state_dict(unpack_tree(record["optimizer"], tensors))
+    torch.random.set_rng_state(tensors["rng.cpu"])

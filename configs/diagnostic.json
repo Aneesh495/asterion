@@ -1,0 +1,19 @@
+{
+  "profile": "diagnostic",
+  "molecules": ["ethanol"],
+  "models": ["equivariant", "invariant"],
+  "seeds": [1, 2, 3],
+  "budgets": [100],
+  "epochs": 100,
+  "batch_size": 8,
+  "validation_size": 64,
+  "calibration_size": 64,
+  "evaluation_size": 256,
+  "architecture": {"width": 8, "depth": 2, "radial": 8, "lmax": 2, "cutoff": 5.0},
+  "training": {"learning_rate": 0.003, "energy_weight": 0.1, "force_weight": 1.0, "threads": 2, "dtype": "float64", "device": "cpu"},
+  "simulation": {"steps": 250, "timestep_fs": 0.1, "temperatures_K": [100, 300, 500], "starts_per_temperature": 1},
+  "acquisition_molecules": ["ethanol"],
+  "acquisition_budgets": [32, 64, 100],
+  "ablations": ["lmax", "higher_order", "smoothness", "force_loss", "policy"],
+  "requirements": {"semantic_tests": 400, "property_cases": 10000, "symmetry_trials": 1200, "force_checks": 1000, "hessian_checks": 100, "analytic_dynamics": 100, "learned_steps": 1000000, "recovery_cases": 50, "fault_cases": 100, "stress_seconds": 1800, "negative_controls": 12}
+}

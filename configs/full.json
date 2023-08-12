@@ -1,0 +1,21 @@
+{
+  "profile": "full",
+  "molecules": ["aspirin", "ethanol", "malonaldehyde", "salicylic"],
+  "models": ["equivariant", "invariant"],
+  "seeds": [1, 2, 3],
+  "budgets": [100, 300, 1000],
+  "epochs": 400,
+  "batch_size": 8,
+  "validation_size": 500,
+  "calibration_size": 500,
+  "evaluation_size": 5000,
+  "architecture": {"width": 24, "depth": 3, "radial": 12, "lmax": 2, "cutoff": 5.0},
+  "training": {"learning_rate": 0.003, "energy_weight": 0.1, "force_weight": 1.0, "threads": 4, "dtype": "float32", "device": "cuda"},
+  "simulation": {"steps": 10000, "timestep_fs": 0.1, "temperatures_K": [100, 300, 500], "starts_per_temperature": 3},
+  "acquisition_molecules": ["ethanol", "malonaldehyde"],
+  "acquisition_budgets": [100, 300, 1000],
+  "ablations": ["lmax", "higher_order", "smoothness", "force_loss", "policy"],
+  "reference": {"implementation": "mace-torch", "version": "0.3.14", "budgets": [1000], "environment": "separate"},
+  "secondary": {"family": "MD22", "system": "Ac-Ala3-NHMe", "level": "PBE+MBD", "train": 1000, "evaluation": 1000, "starts": 10, "steps": 5000},
+  "requirements": {"semantic_tests": 400, "property_cases": 10000, "symmetry_trials": 1200, "force_checks": 1000, "hessian_checks": 100, "analytic_dynamics": 100, "learned_steps": 1000000, "recovery_cases": 50, "fault_cases": 100, "stress_seconds": 1800, "negative_controls": 12}
+}

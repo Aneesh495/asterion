@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asterion | molecular evidence</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui;background:#0e1218;color:#dae4f0}
+body{margin:0;padding:24px;max-width:1300px;margin-inline:auto}h1{font-weight:500;margin:0}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+small,.muted{color:#a1afbf}main{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+section{background:#161d27;border:1px solid #2b3746;border-radius:12px;padding:20px}
+canvas{width:100%;height:480px;touch-action:none;background:#111923;border-radius:8px}
+button,select{background:#26364b;color:#eaf2ff;border:1px solid #4b6582;border-radius:5px;padding:8px}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #6adaff;outline-offset:3px}
+label{display:inline-flex;align-items:center;gap:5px;margin-right:12px;margin-block:8px}
+input[type=range]{width:100%;accent-color:#6adaff}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;line-height:1.6}
+.value{font-variant-numeric:tabular-nums;color:#80e4da;font-size:22px;margin-block:10px}
+.warn{color:#ffc487}.chart{width:100%;height:160px}footer{margin-top:18px;color:#a1afbf;font-size:12px}
+@media(max-width:800px){main{grid-template-columns:1fr}body{padding:12px}canvas{height:350px}}
+</style>
+<header><div><h1>Asterion</h1><small>Original learned potentials and retained physical evidence</small></div>
+<select id="mode" aria-label="Displayed observations"><option value="samples">Held-out force errors</option><option value="frames">Learned trajectory</option></select></header>
+<main><section><canvas id="molecule" aria-label="Interactive molecular coordinates and force vectors"></canvas>
+<label><input id="prediction" type="checkbox" checked>Learned force</label>
+<label><input id="reference" type="checkbox">Reference force</label>
+<label><input id="error" type="checkbox">Force error</label>
+<label><input id="bonds" type="checkbox" checked>Distance bonds</label>
+<input id="frame" type="range" min="0" value="0" aria-label="Observation index">
+<div><button id="play">Play trajectory</button> <span id="index"></span></div>
+<p class="muted">Drag to rotate. Scroll to zoom. Bond lines use a distance heuristic.</p>
+<div id="reference-state" class="muted"></div></section>
+<section><h2 id="observation-title">Held-out geometry</h2><div id="metric" class="value"></div><div id="details"></div>
+<h3>Energy accounting</h3><canvas class="chart" id="energy" aria-label="Retained potential plus kinetic energy with thermostat heat"></canvas>
+<small>Energy change in eV. Blue: total energy. Orange: total energy minus recorded thermostat heat.</small>
+<h3>Uncertainty</h3><canvas class="chart" id="uncertainty" aria-label="Retained committee force disagreement"></canvas>
+<small id="uncertainty-label"></small><h3>Termination</h3><p id="termination"></p>
+<details><summary>Artifact identities</summary><pre id="lineage"></pre></details></section></main>
+<footer>This view contains real retained observations. A finite trajectory does not establish thermodynamic accuracy.</footer>
+<script>
+const data=__ASTERION_DATA__;
+const $=id=>document.getElementById(id), canvas=$('molecule'), ctx=canvas.getContext('2d');
+const symbols={1:'H',6:'C',7:'N',8:'O'},colors={1:'#dfe7ef',6:'#72a4c7',7:'#858df5',8:'#f07b78'},radii={1:.31,6:.76,7:.71,8:.66};
+let yaw=.6,pitch=.3,zoom=1,drag=null,timer=null;
+function series(){return data[$('mode').value]}
+function current(){return series()[Number($('frame').value)]}
+function setupCanvas(element){const r=element.getBoundingClientRect(),d=window.devicePixelRatio||1;element.width=r.width*d;element.height=r.height*d;const c=element.getContext('2d');c.setTransform(d,0,0,d,0,0);return [c,r.width,r.height]}
+function rotate(v){const a=Math.cos(yaw),b=Math.sin(yaw),c=Math.cos(pitch),d=Math.sin(pitch),x=a*v[0]+b*v[2],z=-b*v[0]+a*v[2];return [x,c*v[1]-d*z,d*v[1]+c*z]}
+function arrow(from,to,color){ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=1.7;ctx.beginPath();ctx.moveTo(...from);ctx.lineTo(...to);ctx.stroke();const a=Math.atan2(to[1]-from[1],to[0]-from[0]);ctx.beginPath();ctx.moveTo(...to);ctx.lineTo(to[0]-7*Math.cos(a-.4),to[1]-7*Math.sin(a-.4));ctx.lineTo(to[0]-7*Math.cos(a+.4),to[1]-7*Math.sin(a+.4));ctx.closePath();ctx.fill()}
+function render(){const [context,w,h]=setupCanvas(canvas),o=current();context.clearRect(0,0,w,h);const center=[0,0,0];o.positions.forEach(p=>p.forEach((v,i)=>center[i]+=v/o.positions.length));const rotated=o.positions.map(p=>rotate(p.map((v,i)=>v-center[i])));const extent=Math.max(2,...rotated.map(p=>Math.hypot(...p))),scale=Math.min(w,h)*.36/extent*zoom;const project=p=>[w/2+p[0]*scale,h/2-p[1]*scale];const points=rotated.map(project);
+if($('bonds').checked){context.strokeStyle='#596c80';context.lineWidth=3;for(let i=0;i<points.length;i++)for(let j=i+1;j<points.length;j++){const d=Math.hypot(...o.positions[i].map((x,k)=>x-o.positions[j][k]));if(d<1.25*(radii[o.numbers[i]]+radii[o.numbers[j]])){context.beginPath();context.moveTo(...points[i]);context.lineTo(...points[j]);context.stroke()}}}
+const layers=[[$('prediction').checked,o.force,'#69ddd1'],[$('reference').checked,o.reference,'#e7b765'],[$('error').checked,o.reference?o.force.map((f,i)=>f.map((x,k)=>x-o.reference[i][k])):null,'#e588e1']];
+for(const [enabled,forces,color] of layers)if(enabled&&forces){const normalization=Math.max(.2,...forces.map(f=>Math.hypot(...f)));forces.forEach((f,i)=>{const v=rotate(f),end=[points[i][0]+v[0]/normalization*60,points[i][1]-v[1]/normalization*60];arrow(points[i],end,color)})}
+[...points.keys()].sort((i,j)=>rotated[i][2]-rotated[j][2]).forEach(i=>{const radius=o.numbers[i]===1?7:11;context.beginPath();context.arc(...points[i],radius,0,2*Math.PI);context.fillStyle=colors[o.numbers[i]];context.fill();context.strokeStyle='#d5e4f1';context.lineWidth=1;context.stroke();context.fillStyle='#07121a';context.font='11px system-ui';context.textAlign='center';context.fillText(symbols[o.numbers[i]],points[i][0],points[i][1]+4)});
+$('index').textContent=`${Number($('frame').value)+1} / ${series().length} | ${o.identity}`;
+if(o.reference){const error=o.force.flatMap((f,i)=>f.map((v,k)=>Math.abs(v-o.reference[i][k]))).reduce((a,b)=>a+b,0)/(o.force.length*3);$('metric').textContent=`${error.toFixed(5)} eV/Å`;$('details').textContent=`Force MAE. Energy error ${(o.energy-o.target).toFixed(6)} eV.`;$('reference-state').textContent='Reference labels belong to this held-out released geometry.'}
+else{$('metric').textContent=`${o.energy.toFixed(6)} eV`;$('details').textContent=`Step ${o.step}. Recorded uncertainty ${o.uncertainty.toFixed(6)} eV/Å.`;$('reference-state').textContent='No reference labels exist for the generated trajectory coordinates.'}
+}
+function plot(element,curves){const [c,w,h]=setupCanvas(element);c.clearRect(0,0,w,h);const values=curves.flatMap(x=>x[0]),low=Math.min(...values),high=Math.max(...values),span=Math.max(high-low,1e-12);c.strokeStyle='#334459';c.beginPath();c.moveTo(35,10);c.lineTo(35,h-25);c.lineTo(w-10,h-25);c.stroke();c.font='10px system-ui';c.fillStyle='#a1afbf';c.fillText(high.toExponential(2),0,15);c.fillText(low.toExponential(2),0,h-25);for(const [v,color] of curves){c.strokeStyle=color;c.beginPath();v.forEach((x,i)=>{const p=[35+(w-45)*i/Math.max(v.length-1,1),10+(h-35)*(high-x)/span];i?c.lineTo(...p):c.moveTo(...p)});c.stroke()}}
+function charts(){const hist=data.history,total=hist.potential.map((v,i)=>v+hist.kinetic[i]),first=total[0],adjusted=total.map((v,i)=>v-hist.heat[i]-first);plot($('energy'),[[total.map(v=>v-first),'#6dbeff'],[adjusted,'#e7b765']]);plot($('uncertainty'),[[hist.uncertainty,'#69ddd1']]);$('uncertainty-label').textContent=hist.uncertainty.some(v=>v>0)?'Recorded force disagreement in eV/Å.':'No committee was attached to this trajectory. Zero values represent unavailable disagreement.'}
+function updateMode(){$('frame').max=series().length-1;$('frame').value=0;$('observation-title').textContent=$('mode').value==='samples'?'Held-out geometry':'Learned trajectory';render()}
+$('mode').onchange=updateMode;$('frame').oninput=render;['prediction','reference','error','bonds'].forEach(id=>$(id).onchange=render);
+canvas.onpointerdown=e=>{drag=[e.clientX,e.clientY];canvas.setPointerCapture(e.pointerId)};canvas.onpointermove=e=>{if(drag){yaw+=(e.clientX-drag[0])*.01;pitch+=(e.clientY-drag[1])*.01;drag=[e.clientX,e.clientY];render()}};canvas.onpointerup=()=>drag=null;canvas.onwheel=e=>{e.preventDefault();zoom=Math.min(3,Math.max(.3,zoom*Math.exp(-e.deltaY*.001)));render()};
+$('play').onclick=()=>{if(timer){clearInterval(timer);timer=null;$('play').textContent='Play trajectory';return}$('mode').value='frames';updateMode();$('play').textContent='Pause';timer=setInterval(()=>{$('frame').value=(Number($('frame').value)+1)%series().length;render()},100)};
+$('termination').textContent=`${data.trajectory.status}: ${data.trajectory.reason}. ${data.trajectory.completed_steps}/${data.trajectory.requested_steps} completed steps, ${data.trajectory.physical_horizon_fs} fs.`;$('termination').className=data.trajectory.status==='passed'?'':'warn';$('lineage').textContent=JSON.stringify(data.lineage,null,2);window.onresize=()=>{render();charts()};updateMode();charts();
+</script>
+</html>
