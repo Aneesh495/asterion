@@ -1,4 +1,5 @@
 import math
+from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass
 
 import torch
@@ -8,7 +9,7 @@ from torch import nn
 from asterion.contracts.errors import ContractError
 from asterion.contracts.geometry import Batch
 from asterion.graphs.radial import RadialBasis
-from asterion.graphs.radius import RadiusGraph
+from asterion.graphs.radius import RadiusGraph, geometry_edges
 from asterion.representations.features import ParityGate, invariant_norms
 
 
@@ -85,8 +86,16 @@ class EquivariantInteraction(nn.Module):
         return (features + self.gate(self.mix(aggregate) + self.residual(features))) / math.sqrt(2)
 
 
-class EnergyPotential(nn.Module):
+class EnergyPotential(nn.Module, ABC):
     """Energy normalization is applied before differentiating, so force units stay physical."""
+
+    vocabulary: torch.Tensor
+    energy_scale: torch.Tensor
+    energy_offset: torch.Tensor
+
+    @abstractmethod
+    def atomic_energy(self, features, edges, radial, envelope) -> torch.Tensor:
+        """Return one invariant scalar per atom from the declared representation path."""
 
     def __init__(self, config: ModelConfig):
         super().__init__()
@@ -95,8 +104,10 @@ class EnergyPotential(nn.Module):
         self.basis = RadialBasis(config.radial, config.cutoff, config.smooth)
         self.embedding = nn.Embedding(len(config.elements), config.width)
         self.register_buffer("vocabulary", torch.tensor(config.elements, dtype=torch.long))
-        self.register_buffer("energy_scale", torch.tensor(config.energy_scale))
-        self.register_buffer("energy_offset", torch.tensor(config.energy_offset))
+        self.register_buffer("energy_scale", torch.tensor(config.energy_scale, dtype=torch.float64))
+        self.register_buffer(
+            "energy_offset", torch.tensor(config.energy_offset, dtype=torch.float64)
+        )
 
     def element_indices(self, numbers):
         matches = numbers[:, None] == self.vocabulary[None]
@@ -106,7 +117,11 @@ class EnergyPotential(nn.Module):
 
     def energies(self, batch: Batch, edges=None):
         batch.validate()
-        edges = self.graph_builder(batch) if edges is None else edges
+        edges = (
+            self.graph_builder(batch)
+            if edges is None
+            else geometry_edges(batch, edges.source, edges.target)
+        )
         radial = self.basis(edges.distance)
         envelope = self.basis.envelope(edges.distance)
         features = self.embedding(self.element_indices(batch.numbers))

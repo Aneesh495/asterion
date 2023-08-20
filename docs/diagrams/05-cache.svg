@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1460" height="135" viewBox="0 0 1460 135">
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#4b718c"/></marker></defs>
+<rect width="100%" height="100%" fill="#f8fbfd"/>
+<path d="M230,66 C250,66 250,66 270,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M470,66 C490,66 490,66 510,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M710,66 C730,66 730,66 750,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M230,66 C250,66 730,66 750,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M950,66 C970,66 970,66 990,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M1190,66 C1210,66 1210,66 1230,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="130" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Current positions</text>
+<text x="130" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">new gradient graph</text>
+<rect x="270" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="370" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Check skin / 2 motion</text>
+<text x="370" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">chemistry and batch</text>
+<rect x="510" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="610" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Detached indices</text>
+<text x="610" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">cutoff plus skin</text>
+<rect x="750" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="850" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Fresh edge vectors</text>
+<text x="850" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">current positions</text>
+<rect x="990" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="1090" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Filter active cutoff</text>
+<text x="1090" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">smooth envelope</text>
+<rect x="1230" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="1330" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Energy and force</text>
+<text x="1330" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">no stale tensors</text>
+</svg>

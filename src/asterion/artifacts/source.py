@@ -18,7 +18,7 @@ def project_root() -> Path:
 
 def source_inputs(root: Path | None = None):
     root = root or project_root()
-    paths = []
+    paths: list[Path] = []
     for directory in ("src", "tests", "configs", "scripts"):
         paths.extend(
             path

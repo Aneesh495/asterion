@@ -1,0 +1,15 @@
+digraph Asterion {
+  rankdir=LR;
+  state [label="Current positions\nnew gradient graph"];
+  motion [label="Check skin / 2 motion\nchemistry and batch"];
+  rebuild [label="Detached indices\ncutoff plus skin"];
+  vectors [label="Fresh edge vectors\ncurrent positions"];
+  active [label="Filter active cutoff\nsmooth envelope"];
+  model [label="Energy and force\nno stale tensors"];
+  state -> motion;
+  motion -> rebuild;
+  rebuild -> vectors;
+  state -> vectors;
+  vectors -> active;
+  active -> model;
+}

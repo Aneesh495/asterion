@@ -61,6 +61,7 @@ def predict(model, labels, batch_size=8):
     for start in range(0, len(labels), batch_size):
         selected = labels[start : start + batch_size]
         batch = collate(selected, dtype=parameter.dtype, device=parameter.device)
+        assert batch.energy is not None and batch.forces is not None
         energy, force = model(batch)
         energies.append(energy.detach().cpu().numpy())
         forces.append(force.detach().cpu().numpy())
@@ -176,6 +177,9 @@ def train(
     initial_weights = {k: v.detach().clone() for k, v in model.named_parameters()}
     for epoch in range(completed, config.epochs):
         model.train()
+        factor = 0.1 + 0.9 * (1 + np.cos(np.pi * epoch / config.epochs)) / 2
+        for parameter_group in optimizer.param_groups:
+            parameter_group["lr"] = config.learning_rate * factor
         started = time.perf_counter()
         order = np.random.default_rng(config.seed * 1000003 + epoch).permutation(len(labels))
         totals = {"energy_loss": 0.0, "force_loss": 0.0, "force_gradient_squared": 0.0}

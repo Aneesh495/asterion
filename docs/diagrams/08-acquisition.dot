@@ -1,0 +1,15 @@
+digraph Asterion {
+  rankdir=LR;
+  candidate [label="Allowed unlabeled coordinates\nshared initial pool"];
+  members [label="Three random seeds\nrevealed labels"];
+  score [label="Force disagreement\neV / angstrom"];
+  cal [label="Separate calibration\nfinite-sample ratios"];
+  policy [label="Uniform or diversity\nor combined ranks"];
+  reveal [label="Immutable next round\nunique structure count"];
+  candidate -> score;
+  members -> score;
+  score -> cal;
+  score -> policy;
+  candidate -> policy;
+  policy -> reveal;
+}

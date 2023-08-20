@@ -1,0 +1,18 @@
+digraph Asterion {
+  rankdir=LR;
+  data [label="Versioned coordinates\nand released labels"];
+  ledger [label="Frozen split and reveal\nlabel budget"];
+  graph [label="Directed radius graph\ndifferentiable vectors"];
+  model [label="Original O(3) energy\nphysical scalar"];
+  force [label="Negative energy gradient\neV / angstrom"];
+  md [label="Original NVE / NVT\nrecorded trajectories"];
+  verify [label="Independent metrics\nand SI replay"];
+  viewer [label="Retained observations\ninteractive viewer"];
+  data -> ledger;
+  ledger -> graph;
+  graph -> model;
+  model -> force;
+  force -> md;
+  md -> verify;
+  verify -> viewer;
+}

@@ -1,0 +1,16 @@
+digraph Asterion {
+  rankdir=LR;
+  source [label="Committed source\nlocks and configs"];
+  split [label="Dataset and split\nimmutable membership"];
+  run [label="Original random seed\nforce-loss updates"];
+  weights [label="Selected safe tensors\nvalidation minimum"];
+  raw [label="Raw held-out predictions\ntrajectory frames"];
+  bundle [label="Manifest and source inputs\nexact profile"];
+  probe [label="Source-selected probes\nindependent checks"];
+  source -> run;
+  split -> run;
+  run -> weights;
+  weights -> raw;
+  raw -> bundle;
+  bundle -> probe;
+}

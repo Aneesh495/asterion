@@ -164,7 +164,7 @@ def evaluate_campaign(config, storage: Path, directory: Path):
 
 
 def ablation_campaign(config, storage: Path, directory: Path):
-    variants = {
+    variants: dict[str, dict] = {
         "lmax0": {"lmax": 0},
         "lmax1": {"lmax": 1},
         "no-higher-order": {"higher_order": False},

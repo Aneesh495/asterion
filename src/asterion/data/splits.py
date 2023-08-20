@@ -135,7 +135,14 @@ def guarded_split(
             raise ContractError("temporal block too small after guards")
         selected.append(tuple(map(int, rng.choice(part, size=size, replace=False))))
     return Split(
-        pool.dataset_hash, "temporal-block-guard", seed, *selected, temporal_guard=guard
+        pool.dataset_hash,
+        "temporal-block-guard",
+        seed,
+        selected[0],
+        selected[1],
+        selected[2],
+        selected[3],
+        temporal_guard=guard,
     ).validate(n)
 
 

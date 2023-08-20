@@ -1,0 +1,16 @@
+digraph Asterion {
+  rankdir=LR;
+  author [label="Author file bytes\nchecksum and level"];
+  pool [label="Coordinate pool\noriginal temporal index"];
+  split [label="Immutable role membership\nauthor or guarded"];
+  oracle [label="Allowed label oracle\nexplicit access role"];
+  reveal [label="Unique reveal chain\n100 / 300 / 1000"];
+  train [label="Revealed labels only\ntraining normalizer"];
+  test [label="Distinct held-out rows\nevaluation labels"];
+  author -> pool;
+  pool -> split;
+  split -> oracle;
+  oracle -> reveal;
+  reveal -> train;
+  oracle -> test;
+}

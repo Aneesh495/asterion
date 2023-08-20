@@ -15,7 +15,7 @@ class RevealLedger:
         self.split = split
         self.directory = directory
         self.directory.mkdir(parents=True, exist_ok=True)
-        self.rounds = []
+        self.rounds: list[dict] = []
         previous = "genesis"
         seen: set[int] = set()
         for path in sorted(directory.glob("round-*.json")):

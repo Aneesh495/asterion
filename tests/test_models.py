@@ -29,6 +29,16 @@ def test_cache_force_gradient(model, geometry):
     torch.testing.assert_close(actual[1], expected[1])
 
 
+def test_cached_edges_rebind_after_coordinate_clone(model, geometry):
+    batch = collate([geometry])
+    cache = NeighborCache(model.config.cutoff)
+    edges = cache(batch)
+    energy, force = model(batch, edges=edges)
+    expected_energy, expected_force = model(collate([geometry]))
+    torch.testing.assert_close(energy, expected_energy)
+    torch.testing.assert_close(force, expected_force)
+
+
 def test_collinear(model):
     geometry = Geometry(
         np.array([1, 6, 1]),

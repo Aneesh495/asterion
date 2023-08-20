@@ -1,0 +1,14 @@
+digraph Asterion {
+  rankdir=LR;
+  old [label="Validated old state\nposition velocity force"];
+  drift [label="SI-derived acceleration\nfull position drift"];
+  geometry [label="Collision and domain\npre-force detector"];
+  force [label="Original model gradient\nnew candidate force"];
+  kick [label="Average old and new force\ncomplete velocity kick"];
+  record [label="Valid completed frame\nor explicit failure"];
+  old -> drift;
+  drift -> geometry;
+  geometry -> force;
+  force -> kick;
+  kick -> record;
+}

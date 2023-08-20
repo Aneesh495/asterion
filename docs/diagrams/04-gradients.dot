@@ -1,0 +1,14 @@
+digraph Asterion {
+  rankdir=LR;
+  pos [label="Positions require grad\nangstrom"];
+  e [label="Physical scalar energy\neV"];
+  f [label="Coordinate derivative\nnegative force"];
+  loss [label="Revealed force labels\nnormalized loss"];
+  mixed [label="Mixed parameter derivative\nnonzero audit"];
+  opt [label="Adam update\nactual sample count"];
+  pos -> e;
+  e -> f;
+  f -> loss;
+  loss -> mixed;
+  mixed -> opt;
+}

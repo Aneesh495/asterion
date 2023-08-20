@@ -1,0 +1,14 @@
+digraph Asterion {
+  rankdir=LR;
+  execute [label="Owned coordinator\nbounded batching"];
+  snapshot [label="Tensors and metadata\nRNG and sampler epoch"];
+  publish [label="Atomic generation\nthen latest pointer"];
+  interrupt [label="Explicit interruption\nretained outputs"];
+  restore [label="Verify frozen lineage\nrestore moments and RNG"];
+  compare [label="Resume completion\nCPU tensor comparison"];
+  execute -> snapshot;
+  snapshot -> publish;
+  publish -> interrupt;
+  interrupt -> restore;
+  restore -> compare;
+}

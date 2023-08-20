@@ -139,6 +139,7 @@ def collate(items: list[Geometry | Label], dtype=torch.float64, device="cpu") ->
     if len({g.chemistry for g in geometries}) != 1:
         raise ContractError("different electronic structure tasks require separate batches")
     sizes = np.array([len(g.numbers) for g in geometries])
+    labels = [item for item in items if isinstance(item, Label)]
     return Batch(
         torch.as_tensor(
             np.concatenate([g.numbers for g in geometries]), dtype=torch.long, device=device
@@ -149,10 +150,12 @@ def collate(items: list[Geometry | Label], dtype=torch.float64, device="cpu") ->
         torch.as_tensor(np.repeat(np.arange(len(items)), sizes), dtype=torch.long, device=device),
         torch.as_tensor(np.r_[0, sizes.cumsum()], dtype=torch.long, device=device),
         tuple(g.identity for g in geometries),
-        torch.tensor([item.energy for item in items], dtype=dtype, device=device)
+        torch.tensor([item.energy for item in labels], dtype=dtype, device=device)
         if labeled
         else None,
-        torch.as_tensor(np.concatenate([item.forces for item in items]), dtype=dtype, device=device)
+        torch.as_tensor(
+            np.concatenate([item.forces for item in labels]), dtype=dtype, device=device
+        )
         if labeled
         else None,
     ).validate()

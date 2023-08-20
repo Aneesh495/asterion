@@ -1,0 +1,16 @@
+digraph Asterion {
+  rankdir=LR;
+  z [label="Element embeddings\neven scalars"];
+  edge [label="Radial basis and cutoff\nscalar edge weights"];
+  sh [label="Real harmonics\n0e + 1o + 2e"];
+  tp [label="Learned tensor product\nO(3) intertwiner"];
+  gate [label="Whole-irrep gates\nscalar-conditioned"];
+  inv [label="Squared norms and\nquadratic contractions"];
+  energy [label="Atomic scalar sum\nphysical normalization"];
+  z -> tp;
+  edge -> tp;
+  sh -> tp;
+  tp -> gate;
+  gate -> inv;
+  inv -> energy;
+}

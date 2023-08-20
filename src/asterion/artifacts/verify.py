@@ -86,7 +86,7 @@ def check_dataset(records):
 
 def check_reveals(directory, split):
     previous = "genesis"
-    seen = set()
+    seen: set[int] = set()
     ordered = []
     for index, path in enumerate(sorted((directory / "reveal").glob("round-*.json"))):
         record = read_json(path)
@@ -215,6 +215,11 @@ def verify_training(root: Path, entry, source, datasets, profile):
     require(change > 1e-18, "saved trained weights equal random initialization")
     arrays = read_arrays(directory / "evaluation-predictions.npz")
     untrained = read_arrays(directory / "evaluation-untrained.npz")
+    for key in ("target_energy", "target_force", "pointers", "positions", "numbers", "identities"):
+        require(
+            np.array_equal(untrained[key], arrays[key]),
+            "untrained comparison uses different held-out units",
+        )
     metrics = read_json(directory / "evaluation-metrics.json")
     require(
         metrics["checkpoint"] == checkpoint["identity"],
@@ -303,6 +308,19 @@ def verify_training(root: Path, entry, source, datasets, profile):
             ),
             "saved-checkpoint prediction replay mismatch",
         )
+        initial_energy, initial_force = initial(collate([geometry]))
+        require(
+            np.allclose(
+                initial_energy.detach().numpy(),
+                untrained["energy"][i : i + 1],
+                rtol=1e-8,
+                atol=1e-9,
+            )
+            and np.allclose(
+                initial_force.detach().numpy(), untrained["force"][begin:end], rtol=1e-7, atol=1e-9
+            ),
+            "saved random-initialization replay mismatch",
+        )
     return {
         "molecule": molecule,
         "model": entry["model"],
@@ -385,7 +403,6 @@ def verify(root: Path, expected_profile="full"):
             all(item["status"] == "passed" for item in report["gates"].values()),
             "full profile has unmet gates",
         )
-    commands = [read_json_line for read_json_line in []]
     import json
 
     commands = [json.loads(line) for line in (root / "COMMANDS.jsonl").read_text().splitlines()]

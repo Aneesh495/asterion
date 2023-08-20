@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1460" height="135" viewBox="0 0 1460 135">
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8" fill="#4b718c"/></marker></defs>
+<rect width="100%" height="100%" fill="#f8fbfd"/>
+<path d="M230,66 C250,66 250,66 270,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M470,66 C490,66 490,66 510,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M710,66 C730,66 730,66 750,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M950,66 C970,66 970,66 990,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<path d="M1190,66 C1210,66 1210,66 1230,66" stroke="#4b718c" fill="none" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="30" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="130" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Owned coordinator</text>
+<text x="130" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">bounded batching</text>
+<rect x="270" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="370" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Tensors and metadata</text>
+<text x="370" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">RNG and sampler epoch</text>
+<rect x="510" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="610" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Atomic generation</text>
+<text x="610" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">then latest pointer</text>
+<rect x="750" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="850" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Explicit interruption</text>
+<text x="850" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">retained outputs</text>
+<rect x="990" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="1090" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Verify frozen lineage</text>
+<text x="1090" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">restore moments and RNG</text>
+<rect x="1230" y="30" width="200" height="72" rx="8" fill="#e6f0f5" stroke="#4b718c"/>
+<text x="1330" y="58" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">Resume completion</text>
+<text x="1330" y="76" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#182e40">CPU tensor comparison</text>
+</svg>

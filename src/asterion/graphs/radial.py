@@ -15,6 +15,8 @@ def smooth_cutoff(distance: torch.Tensor, cutoff: float):
 
 
 class RadialBasis(nn.Module):
+    frequencies: torch.Tensor
+
     def __init__(self, count: int, cutoff: float, smooth=True):
         super().__init__()
         if count < 2 or cutoff <= 0:
@@ -22,7 +24,9 @@ class RadialBasis(nn.Module):
         self.count = count
         self.cutoff = cutoff
         self.smooth = smooth
-        self.register_buffer("frequencies", torch.arange(1, count + 1) * math.pi)
+        self.register_buffer(
+            "frequencies", torch.arange(1, count + 1, dtype=torch.float64) * math.pi
+        )
 
     def envelope(self, distance):
         if self.smooth:

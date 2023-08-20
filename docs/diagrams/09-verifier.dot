@@ -1,0 +1,14 @@
+digraph Asterion {
+  rankdir=LR;
+  hash [label="Exact file inventory\nand SHA256"];
+  source [label="Commit owns source bytes\ncurrent inputs match"];
+  labels [label="Independent source labels\nunits and role checks"];
+  metrics [label="Independent denominators\nand raw error arithmetic"];
+  replay [label="Saved-weight probes\nSI trajectory replay"];
+  control [label="Disposable mutations\nreal nonzero exits"];
+  hash -> source;
+  source -> labels;
+  labels -> metrics;
+  metrics -> replay;
+  replay -> control;
+}

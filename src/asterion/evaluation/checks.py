@@ -20,8 +20,8 @@ def force_difference(model, geometry: Geometry, step=1e-5):
             finite[atom, axis] = -(ep - em) / (2 * step)
     _, force = model(collate([geometry]))
     actual = force.detach().numpy()
-    absolute = np.linalg.norm(actual - finite)
-    scale = max(np.linalg.norm(actual), np.linalg.norm(finite), 1e-8)
+    absolute = float(np.linalg.norm(actual - finite))
+    scale = max(float(np.linalg.norm(actual)), float(np.linalg.norm(finite)), 1e-8)
     return {
         "absolute": float(absolute),
         "relative": float(absolute / scale),
@@ -42,8 +42,8 @@ def hessian_difference(model, geometry: Geometry, direction: np.ndarray, step=1e
     _, fp = model(collate([plus]))
     _, fm = model(collate([minus]))
     finite = -(fp.detach().numpy() - fm.detach().numpy()) / (2 * step)
-    absolute = np.linalg.norm(product - finite)
-    scale = max(np.linalg.norm(product), np.linalg.norm(finite), 1e-8)
+    absolute = float(np.linalg.norm(product - finite))
+    scale = max(float(np.linalg.norm(product)), float(np.linalg.norm(finite)), 1e-8)
     return {
         "absolute": float(absolute),
         "relative": float(absolute / scale),
@@ -93,15 +93,16 @@ def symmetry_trial(model, geometry: Geometry, seed: int):
     )
     de, df = model(collate([disconnected]))
     be, bf = model(collate([double, geometry]))
-    scale = max(np.linalg.norm(actual_force), 1e-8)
+    scale = max(float(np.linalg.norm(actual_force)), 1e-8)
     return {
         "seed": seed,
         "reflection": bool(seed % 2),
         "energy_error": abs((energy - changed_energy).item()),
-        "force_relative": float(np.linalg.norm(transformed_force - target_force) / scale),
-        "net_force": float(np.linalg.norm(net) / scale),
+        "force_relative": float(float(np.linalg.norm(transformed_force - target_force)) / scale),
+        "net_force": float(float(np.linalg.norm(net)) / scale),
         "torque": float(
-            np.linalg.norm(torque) / max(scale * np.linalg.norm(center - geometry.positions), 1e-8)
+            float(np.linalg.norm(torque))
+            / max(scale * float(np.linalg.norm(center - geometry.positions)), 1e-8)
         ),
         "additivity": abs(de.item() - 2 * energy.item()),
         "disconnected_force": float(

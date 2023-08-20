@@ -78,10 +78,10 @@ class NeighborCache:
         self.builder = RadiusGraph(cutoff + skin, maximum_edges)
         self.cutoff = cutoff
         self.skin = skin
-        self.reference = None
-        self.numbers = None
-        self.graph = None
-        self.indices = None
+        self.reference: torch.Tensor | None = None
+        self.numbers: torch.Tensor | None = None
+        self.graph: torch.Tensor | None = None
+        self.indices: tuple[torch.Tensor, torch.Tensor] | None = None
         self.rebuilds = 0
 
     def invalidate(self):
@@ -94,10 +94,13 @@ class NeighborCache:
             self.reference is not None
             and self.reference.shape == batch.positions.shape
             and self.reference.device == batch.positions.device
+            and self.numbers is not None
+            and self.graph is not None
             and torch.equal(self.numbers, batch.numbers)
             and torch.equal(self.graph, batch.graph)
         )
         if valid:
+            assert self.reference is not None
             moved = torch.linalg.vector_norm(
                 batch.positions.detach() - self.reference, dim=-1
             ).max()
@@ -109,6 +112,7 @@ class NeighborCache:
             self.numbers = batch.numbers.clone()
             self.graph = batch.graph.clone()
             self.rebuilds += 1
+        assert self.indices is not None
         edges = geometry_edges(batch, *self.indices)
         active = edges.distance.detach() < self.cutoff
         return geometry_edges(batch, edges.source[active], edges.target[active])
