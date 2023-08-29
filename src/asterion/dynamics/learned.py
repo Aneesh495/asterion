@@ -23,3 +23,27 @@ class LearnedEvaluator:
             force.detach().cpu().numpy(),
             neighbor_rebuilds=self.cache.rebuilds,
         )
+
+
+class CommitteeEvaluator:
+    """The committee mean remains the gradient of its mean scalar energy."""
+
+    def __init__(self, committee, calibration, chemistry=Chemistry()):
+        if tuple(calibration.committee) != tuple(committee.identities):
+            from asterion.contracts.errors import IntegrityError
+
+            raise IntegrityError("dynamics calibration belongs to another committee")
+        self.committee = committee
+        self.calibration = calibration
+        self.chemistry = chemistry
+
+    def __call__(self, positions, numbers):
+        geometry = Geometry(numbers, positions, "committee-dynamics", self.chemistry).validate()
+        output = self.committee.infer([geometry])
+        bound = float(self.calibration.bounds(output.force_score)[0])
+        return ForceResult(
+            float(output.energy_mean[0]),
+            output.forces_mean,
+            uncertainty=bound,
+            uncertainty_available=True,
+        )

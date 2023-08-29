@@ -12,5 +12,6 @@ runs/
 evidence/
 dist/
 build/
+reports/
 .DS_Store
 *.tmp

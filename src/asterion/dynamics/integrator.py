@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 from asterion.artifacts.io import atomic_npz, file_hash, object_hash, read_json, write_json
-from asterion.contracts.errors import ContractError, IntegrityError
+from asterion.contracts.errors import AsterionError, ContractError, IntegrityError
 from asterion.contracts.units import (
     ACCELERATION,
     BOLTZMANN_EV_K,
@@ -59,7 +59,9 @@ def verlet(state: State, result: ForceResult, mass, dt) -> State:
     )
 
 
-def snapshot(state: State, numbers, uncertainty=0.0, rebuilds=0, noise=None):
+def snapshot(
+    state: State, numbers, uncertainty=0.0, rebuilds=0, noise=None, uncertainty_available=False
+):
     mass = masses(numbers)
     return {
         "positions": state.positions.copy(),
@@ -70,6 +72,7 @@ def snapshot(state: State, numbers, uncertainty=0.0, rebuilds=0, noise=None):
         "step": state.step,
         "heat": state.heat_eV,
         "uncertainty": uncertainty,
+        "uncertainty_available": uncertainty_available,
         "neighbor_rebuilds": rebuilds,
         "temperature": temperature(state.velocities, mass) if len(numbers) > 1 else 0.0,
         "noise": np.zeros_like(state.positions) if noise is None else noise.copy(),
@@ -155,7 +158,15 @@ def simulate(
             raise ContractError(f"invalid initial state: {reason}")
         initial = evaluator(positions, numbers)
         state = State(positions.copy(), velocities.copy(), initial.forces.copy(), initial.energy)
-        frames.append(snapshot(state, numbers, initial.uncertainty, initial.neighbor_rebuilds))
+        frames.append(
+            snapshot(
+                state,
+                numbers,
+                initial.uncertainty,
+                initial.neighbor_rebuilds,
+                uncertainty_available=initial.uncertainty_available,
+            )
+        )
         reason = detector.forces(initial)
         if reason:
             return write_trajectory(
@@ -192,7 +203,7 @@ def simulate(
             )
         try:
             result = evaluator(candidate, numbers)
-        except (ContractError, FloatingPointError) as error:
+        except (AsterionError, FloatingPointError) as error:
             return write_trajectory(
                 directory,
                 frames,
@@ -220,7 +231,16 @@ def simulate(
             )
         if not np.isfinite(state.velocities).all():
             raise ContractError("nonfinite integrated velocities")
-        frames.append(snapshot(state, numbers, result.uncertainty, result.neighbor_rebuilds, noise))
+        frames.append(
+            snapshot(
+                state,
+                numbers,
+                result.uncertainty,
+                result.neighbor_rebuilds,
+                noise,
+                uncertainty_available=result.uncertainty_available,
+            )
+        )
         if state.step % config.checkpoint_every == 0 or state.step == stop_after:
             name = f"state-{state.step:07}.npz"
             atomic_npz(

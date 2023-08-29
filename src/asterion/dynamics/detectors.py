@@ -67,6 +67,8 @@ class Detector:
             return "extreme-force"
         if not np.isfinite(result.uncertainty) or result.uncertainty < 0:
             return "invalid-uncertainty"
+        if self.policy.maximum_uncertainty is not None and not result.uncertainty_available:
+            return "uncertainty-unavailable"
         if (
             self.policy.maximum_uncertainty is not None
             and result.uncertainty > self.policy.maximum_uncertainty

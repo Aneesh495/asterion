@@ -156,6 +156,10 @@ def train(
         selected_path = directory / selection["checkpoint"]
     else:
         split.write(directory / "split.json")
+        local_reveal = directory / "reveal"
+        local_reveal.mkdir(parents=True, exist_ok=True)
+        for round_record in ledger.rounds:
+            write_json(local_reveal / f"round-{round_record['round']:04}.json", round_record)
         write_json(directory / "config.json", lineage)
         write_json(directory / "SOURCE_INPUTS.json", source)
         write_json(directory / "normalization.json", normalization)
@@ -315,6 +319,8 @@ def evaluate_run(oracle, split, directory: Path, batch_size=8, role="evaluation"
     ]
     training_labels = oracle.labels(training_rows, training_rows, "train")
     baseline_energy = np.mean([label.energy for label in training_labels])
+    mean_force = np.mean(np.stack([label.forces for label in training_labels]), axis=0)
+    mean_prediction = np.tile(mean_force, (len(labels), 1))
     zero = prediction_metrics(
         np.repeat(baseline_energy, len(labels)),
         np.zeros_like(arrays["target_force"]),
@@ -324,10 +330,24 @@ def evaluate_run(oracle, split, directory: Path, batch_size=8, role="evaluation"
     )
     atomic_npz(directory / f"{role}-predictions.npz", **arrays)
     atomic_npz(directory / f"{role}-untrained.npz", **initial_arrays)
+    mean_metrics = prediction_metrics(
+        np.repeat(baseline_energy, len(labels)),
+        mean_prediction,
+        arrays["target_energy"],
+        arrays["target_force"],
+        arrays["pointers"],
+    )
+    atomic_npz(
+        directory / f"{role}-mean-force.npz",
+        force=mean_prediction,
+        energy=np.repeat(baseline_energy, len(labels)),
+        identities=arrays["identities"],
+    )
     result = {
         "trained": metrics,
         "untrained": initial_metrics,
         "zero_force": zero,
+        "mean_force": mean_metrics,
         "checkpoint": checkpoint["identity"],
         "split": split.digest,
         "relative_improvement_zero": 1

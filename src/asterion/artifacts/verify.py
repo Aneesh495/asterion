@@ -330,7 +330,9 @@ def verify_training(root: Path, entry, source, datasets, profile):
         "updates": history[-1]["updates"],
         "force_mae": computed["force_mae_eV_angstrom"],
         "zero_force_mae": float(zero_geometry.mean()),
+        "untrained_force_mae": initial_computed["force_mae_eV_angstrom"],
         "probes": len(selected),
+        "checkpoint": checkpoint["identity"],
     }
 
 
@@ -378,6 +380,32 @@ def verify(root: Path, expected_profile="full"):
     trajectories = [
         replay_trajectory(safe_member(root, entry["path"])) for entry in units["trajectories"]
     ]
+    checkpoints = {}
+    for entry in units["training"]:
+        directory = safe_member(root, entry["path"])
+        selection = read_json(directory / "selection.json")
+        model, metadata = load_checkpoint(directory / selection["checkpoint"])
+        checkpoints[metadata["identity"]] = model
+    for entry in units["trajectories"]:
+        directory = safe_member(root, entry["path"])
+        metadata = read_json(directory / "trajectory.json")
+        require(
+            metadata["lineage"] in checkpoints, "trajectory has no retained trained-model lineage"
+        )
+        model = checkpoints[metadata["lineage"]]
+        arrays = read_arrays(directory / "trajectory.npz")
+        indices = sorted(
+            range(len(arrays["positions"])),
+            key=lambda i: object_hash([source["digest"], entry["path"], i]),
+        )[:8]
+        for i in indices:
+            geometry = Geometry(arrays["numbers"], arrays["positions"][i], f"trajectory-probe-{i}")
+            energy, force = model(collate([geometry]))
+            require(
+                np.allclose(energy.detach().numpy(), arrays["potential"][i], rtol=1e-8, atol=1e-9)
+                and np.allclose(force.detach().numpy(), arrays["forces"][i], rtol=1e-7, atol=1e-9),
+                "trajectory force or energy does not belong to saved weights",
+            )
     learned_steps = sum(item["completed_steps"] for item in trajectories)
     require(
         learned_steps > 0 and report["completed_learned_steps"] == learned_steps,
@@ -390,6 +418,38 @@ def verify(root: Path, expected_profile="full"):
             "shortened simulation workload",
         )
     if expected_profile == "full":
+        from asterion.artifacts.full_gates import verify_full_gates
+
+        verify_full_gates(root, report, config, observations)
+        required_starts = {
+            (m, seed, kelvin, start)
+            for m in config["molecules"]
+            for seed in config["seeds"]
+            for kelvin in (100, 300, 500)
+            for start in range(config["simulation"]["starts_per_temperature"])
+        }
+        actual_starts = [
+            (entry["molecule"], entry["seed"], entry["temperature_K"], entry["start"])
+            for entry in units["trajectories"]
+        ]
+        require(
+            len(actual_starts) == len(set(actual_starts)) and set(actual_starts) == required_starts,
+            "learned trajectory population hides failed or missing starts",
+        )
+        trajectory_metadata = [
+            read_json(safe_member(root, entry["path"]) / "trajectory.json")
+            for entry in units["trajectories"]
+        ]
+        require(
+            all(item["requested_steps"] == 10000 for item in trajectory_metadata),
+            "full starts must request 10000 steps",
+        )
+        require(
+            sum(item["status"] == "passed" for item in trajectory_metadata)
+            / len(trajectory_metadata)
+            >= 0.9,
+            "core learned trajectory completion is below 90 percent",
+        )
         for key, threshold in FULL_REQUIREMENTS.items():
             require(report["counts"].get(key, 0) >= threshold, f"full requirement unmet: {key}")
         require(

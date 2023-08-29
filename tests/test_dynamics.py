@@ -93,3 +93,18 @@ def test_force_detector_preserves_failed_start(tmp_path):
     assert record["status"] == "failed" and record["completed_steps"] == 0
     assert record["reason"] == "extreme-force"
     assert (tmp_path / "failure" / "failure.npz").exists()
+
+
+def test_uncertainty_policy_rejects_missing_score(tmp_path):
+    numbers = np.array([1, 1])
+    positions = np.array([[0.0, 0.0, 0.0], [2.0, 0.0, 0.0]])
+    result = simulate(
+        LennardJones(),
+        numbers,
+        positions,
+        np.zeros_like(positions),
+        tmp_path / "missing-score",
+        SimulationConfig(steps=10),
+        ValidityPolicy(maximum_uncertainty=1.0),
+    )
+    assert result["status"] == "failed" and result["reason"] == "uncertainty-unavailable"

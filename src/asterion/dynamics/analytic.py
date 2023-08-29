@@ -11,6 +11,7 @@ class ForceResult:
     forces: np.ndarray
     uncertainty: float = 0.0
     neighbor_rebuilds: int = 0
+    uncertainty_available: bool = False
 
 
 class Harmonic:

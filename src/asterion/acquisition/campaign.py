@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 from asterion.acquisition.policy import choose
-from asterion.artifacts.io import object_hash, write_json
+from asterion.artifacts.io import atomic_npz, object_hash, write_json
 from asterion.data.dataset import load_rmd17
 from asterion.data.ledger import RevealLedger
 from asterion.data.splits import author_split, geometry_descriptors
@@ -99,6 +99,13 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         calibration_labels
                     )
                     write_json(run / f"calibration-{round_index}.json", asdict(calibration))
+                    atomic_npz(
+                        run / f"calibration-{round_index}.npz",
+                        identities=calibration_prediction.identities,
+                        scores=calibration_prediction.force_score,
+                        errors=calibration_errors,
+                        bounds=calibration.bounds(calibration_prediction.force_score),
+                    )
                     evaluation = oracle.labels(split.evaluation, split.evaluation, "evaluation")
                     output = committee.infer([label.geometry for label in evaluation])
                     pointers = np.r_[
@@ -113,6 +120,17 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                     )
                     uncertainty = uncertainty_metrics(
                         output.force_score, error, calibration.bounds(output.force_score)
+                    )
+                    atomic_npz(
+                        run / f"uncertainty-evaluation-{round_index}.npz",
+                        identities=output.identities,
+                        scores=output.force_score,
+                        errors=error,
+                        bounds=calibration.bounds(output.force_score),
+                        mean_force=output.forces_mean,
+                        target_force=target,
+                        component_std=output.force_component_std,
+                        pointers=pointers,
                     )
                     disagreement = committee.infer([pool.geometry(row) for row in split.train_pool])
                     outcomes.append(
