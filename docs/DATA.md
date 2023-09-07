@@ -25,7 +25,9 @@ MD22 Ac-Ala3-NHMe contains 85,109 geometries and 42 atoms. Its author file decla
 The SHA256 in `configs/md22-release.json` defines the acquired file version. A separate model and
 ledger are required because its label level differs from rMD17. License terms for redistributing
 this file remain unverified, so data are not shipped with the package. The bounded adapter checks
-file bytes and converts the declared units. The extended-system experiment remains unexecuted.
+file bytes and converts the declared units. A 32-label, two-epoch adapter integration run completed
+64 held-out evaluations and two 16-step starts. It is not the required extended-system study,
+which remains unexecuted.
 
 [MD22 author download](https://sgdml.org/) and the
 [extended-molecule study](https://www.nature.com/articles/s41467-023-39214-w) provide provenance.
