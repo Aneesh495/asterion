@@ -2,6 +2,7 @@ import platform
 import resource
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import e3nn
@@ -10,14 +11,49 @@ import scipy
 import torch
 
 from asterion.artifacts.io import file_hash, object_hash
+from asterion.contracts.errors import ContractError, IntegrityError
 
 
 def project_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    # Installed wheels have no repository alongside site-packages. Prefer the calling
+    # checkout, then the editable source location, using an explicit project marker.
+    for anchor in (Path.cwd(), Path(__file__).resolve().parent):
+        for candidate in (anchor, *anchor.parents):
+            marker = candidate / "pyproject.toml"
+            if not marker.is_file():
+                continue
+            try:
+                metadata = tomllib.loads(marker.read_text())
+            except (OSError, tomllib.TOMLDecodeError):
+                continue
+            if (
+                metadata.get("project", {}).get("name") == "asterion-md"
+                and (candidate / "src/asterion/artifacts/source.py").is_file()
+            ):
+                return candidate
+    raise ContractError("run repository commands from an Asterion source checkout")
+
+
+def assert_runtime_source(root: Path):
+    """A wheel must not record checkout source hashes while executing different bytes."""
+    expected = root / "src/asterion"
+    loaded = Path(__file__).resolve().parents[1]
+
+    def inventory(directory):
+        return {
+            str(path.relative_to(directory)): file_hash(path)
+            for path in directory.rglob("*")
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"
+        }
+
+    reference = inventory(expected)
+    if not reference or inventory(loaded) != reference:
+        raise IntegrityError("installed Asterion code differs from the source checkout")
 
 
 def source_inputs(root: Path | None = None):
     root = root or project_root()
+    assert_runtime_source(root)
     paths: list[Path] = []
     for directory in ("src", "tests", "configs", "scripts"):
         paths.extend(

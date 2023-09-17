@@ -2,6 +2,11 @@
 
 Phase: source-bound CPU diagnostic verified; full specification incomplete.
 
+Packaging follow-up: installed-wheel repository discovery failed and has been repaired. Seven
+independent runtime/lineage regressions were added; 171 tests now pass. A new source freeze and
+`frozen-diagnostic-03` execution are required before the current source can claim the diagnostic.
+The earlier source-02 bundle is preserved and is not reused across this executable change.
+
 Execution commit is `6e95f9544bf733981a4cb192acec6475cadb15cb`. Executable input digest is
 `e94aeb4d5201d65c86d6514305f7b796d5fc2ce7bbae1eeff10f06b328433283`.
 Later documentation/package commits do not replace this training source identity.

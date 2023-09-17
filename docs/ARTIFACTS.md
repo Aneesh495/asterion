@@ -16,6 +16,11 @@ are chosen by source hash and geometry identity, then replayed with actual saved
 and selected weights must differ. The verifier never trains, regenerates missing observations,
 changes hashes or repairs a bundle.
 
+An installed wheel locates the calling source checkout through the named pyproject marker.
+Before recording source lineage, its installed Python/HTML input inventory must match the
+checkout's src inventory exactly. A stale wheel cannot record newer source hashes. Direct model
+inference can use the package outside a checkout; repository/evidence commands require a checkout.
+
 Trajectory artifacts retain every completed frame, noise used by NVT, velocities, forces,
 potential and kinetic energy, temperature, heat, uncertainty, neighbor rebuilds and termination.
 A failed candidate is retained separately. Independent SI reconstruction checks each completed
