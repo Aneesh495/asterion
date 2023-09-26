@@ -26,8 +26,9 @@ def modify_json(path, mutation):
     write_json(path, value)
 
 
-def controls(bundle: Path, output: Path, profile="diagnostic"):
+def controls(bundle: Path, output: Path, profile="diagnostic", candidate=False):
     output.parent.mkdir(parents=True, exist_ok=True)
+    initial_manifest = file_hash(bundle / "MANIFEST.json")
     env = {**os.environ, "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2"}
     command = [
         sys.executable,
@@ -39,6 +40,10 @@ def controls(bundle: Path, output: Path, profile="diagnostic"):
         "--profile",
         profile,
     ]
+    if candidate:
+        if profile != "full":
+            raise IntegrityError("candidate controls require the full profile")
+        command.append("--candidate")
     positive = subprocess.run(command, capture_output=True, text=True, env=env)
     if positive.returncode != 0:
         raise IntegrityError(f"positive bundle failed before controls: {positive.stderr}")
@@ -153,6 +158,7 @@ def controls(bundle: Path, output: Path, profile="diagnostic"):
                     str(root),
                     "--profile",
                     profile,
+                    *(["--candidate"] if candidate else []),
                 ],
                 capture_output=True,
                 text=True,
@@ -173,8 +179,12 @@ def controls(bundle: Path, output: Path, profile="diagnostic"):
     after = subprocess.run(command, capture_output=True, text=True, env=env)
     if after.returncode != 0:
         raise IntegrityError("valid bundle failed positive verification after controls")
+    if file_hash(bundle / "MANIFEST.json") != initial_manifest:
+        raise IntegrityError("valid bundle changed during negative controls")
     record = {
         "profile": profile,
+        "phase": "candidate" if candidate else "final",
+        "candidate_manifest_sha256": file_hash(bundle / "MANIFEST.json") if candidate else None,
         "controls": results,
         "positive_before": {"exit": positive.returncode, "stdout": positive.stdout},
         "positive_after": {"exit": after.returncode, "stdout": after.stdout},

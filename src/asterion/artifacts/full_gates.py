@@ -4,7 +4,7 @@ from pathlib import Path
 
 import numpy as np
 
-from asterion.artifacts.io import read_json, safe_member
+from asterion.artifacts.io import file_hash, read_json, safe_member
 from asterion.artifacts.source import project_root
 from asterion.contracts.errors import IntegrityError
 from asterion.evaluation.replay import replay_trajectory
@@ -15,7 +15,7 @@ def require(condition, message):
         raise IntegrityError(message)
 
 
-def verify_full_gates(root: Path, report, config, observations):
+def verify_full_gates(root: Path, report, config, observations, candidate=False):
     """Derive full gate populations from retained raw records, never from summary counts."""
     path = root / "GATE_OBSERVATIONS.json"
     require(path.is_file(), "full gate observation index is missing")
@@ -166,7 +166,11 @@ def verify_full_gates(root: Path, report, config, observations):
         and len(memory["samples"]) >= 300,
         "30-minute memory stress shortened or empty",
     )
-    rss = [sample["peak_rss_native"] for sample in memory["samples"]]
+    from asterion.artifacts.io import read_json as read_environment
+
+    env = read_environment(root / "ENVIRONMENT.json")
+    factor = 1024 if env["rss_native_units"] == "KiB" else 1
+    rss = [sample["peak_rss_native"] * factor for sample in memory["samples"]]
     require(
         max(rss[60:]) - min(rss[60:]) <= max(min(rss[60:]) * 0.25, 128 * 1024**2),
         "inference memory is not bounded under declared tolerance",
@@ -180,19 +184,29 @@ def verify_full_gates(root: Path, report, config, observations):
     require(
         all(sample["seconds"] > 0 for sample in benchmark["samples"]), "invalid raw latency sample"
     )
-    controls = read_json(safe_member(root, index["controls"]))
-    require(
-        controls["profile"] == "full"
-        and len(controls["controls"]) >= 12
-        and controls["positive_before"]["exit"] == controls["positive_after"]["exit"] == 0,
-        "full verifier controls absent or positive verification failed",
-    )
-    require(
-        all(control["exit"] != 0 and control["stderr"] for control in controls["controls"])
-        and sum(control["semantic_rehashed"] for control in controls["controls"]) >= 4,
-        "negative controls lack genuine semantic rejections",
-    )
-    counts["negative_controls"] = len(controls["controls"])
+    if candidate:
+        require(not (root / index["controls"]).exists(), "candidate already contains controls")
+        counts["negative_controls"] = 0
+    else:
+        controls = read_json(safe_member(root, index["controls"]))
+        require(
+            controls["profile"] == "full"
+            and controls.get("phase") == "candidate"
+            and len(controls["controls"]) >= 12
+            and controls["positive_before"]["exit"] == controls["positive_after"]["exit"] == 0,
+            "full verifier controls absent or positive verification failed",
+        )
+        require(
+            all(control["exit"] != 0 and control["stderr"] for control in controls["controls"])
+            and sum(control["semantic_rehashed"] for control in controls["controls"]) >= 4,
+            "negative controls lack genuine semantic rejections",
+        )
+        require(controls.get("source_bundle_unchanged"), "candidate changed during controls")
+        require(
+            controls.get("candidate_manifest_sha256") == report.get("candidate_manifest_sha256"),
+            "controls tested another candidate",
+        )
+        counts["negative_controls"] = len(controls["controls"])
     acquisitions = read_json(safe_member(root, index["acquisitions"]))
     expected = {
         (m, s, p, b)
@@ -230,6 +244,117 @@ def verify_full_gates(root: Path, report, config, observations):
         ),
         "matched reference retraining incomplete",
     )
+    expected_reference = {(m, seed) for m in config["molecules"] for seed in config["seeds"]}
+    require(
+        {(row["molecule"], row["seed"]) for row in reference} == expected_reference
+        and len(reference) == len(expected_reference),
+        "reference hides a seed or repeats a training identity",
+    )
+    reference_base = safe_member(root, index["reference"]).parent
+    dataset_records = read_json(root / "DATASETS.json")["files"]
+    datasets = {record["name"]: record for record in dataset_records}
+    conversion = 4184 / (6.02214076e23 * 1.602176634e-19)
+    for row in reference:
+        directory = safe_member(root, str((reference_base / row["path"]).relative_to(root)))
+        require(
+            row.get("budget") == 1000 and row.get("evaluation_exit") == 0,
+            "reference labels or actual prediction execution missing",
+        )
+        require(
+            row.get("selection") == "standard-final-export", "reference selection protocol changed"
+        )
+        model_path = safe_member(directory, row["model_path"])
+        require(file_hash(model_path) == row["model_sha256"], "reference model bytes changed")
+        prediction = directory / "evaluation-predictions.npz"
+        require(
+            file_hash(prediction) == row["predictions_sha256"], "reference prediction bytes changed"
+        )
+        for role in ("train", "validation", "evaluation"):
+            require(
+                file_hash(directory / f"{role}.xyz") == row["inputs"][role],
+                "reference exported input changed",
+            )
+        split = read_json(directory / "split.json")
+        require(split["digest"] == row["split"], "reference split lineage changed")
+        require(
+            len(row["training_rows"]) == len(set(row["training_rows"])) == 1000
+            and set(row["training_rows"]) == set(split["train_pool"]),
+            "reference trained on unmatched or repeated labels",
+        )
+        with np.load(prediction, allow_pickle=False) as raw:
+            force = raw["force"]
+            target = raw["target_force"]
+            energy = raw["energy"]
+            target_energy = raw["target_energy"]
+            pointers = raw["pointers"]
+            positions = raw["positions"]
+            numbers = raw["numbers"]
+            identities = raw["identities"]
+        require(
+            len(energy) >= 5000
+            and pointers.shape == (len(energy) + 1,)
+            and pointers[0] == 0
+            and pointers[-1] == len(force)
+            and np.all(np.diff(pointers) > 0),
+            "reference denominators or held-out count changed",
+        )
+        require(
+            energy.shape == target_energy.shape == (len(energy),)
+            and identities.shape == (len(energy),)
+            and force.ndim == 2
+            and force.shape[1] == 3
+            and numbers.shape == (len(force),)
+            and force.shape == target.shape == positions.shape
+            and all(
+                np.isfinite(x).all() for x in (force, target, energy, target_energy, positions)
+            ),
+            "reference output is empty, malformed or nonfinite",
+        )
+        rows = [int(identity.rsplit(":", 1)[1]) for identity in identities]
+        require(
+            rows == split["evaluation"] and not set(rows) & set(row["training_rows"]),
+            "reference evaluation identities changed or leak labels",
+        )
+        record = datasets[f"rmd17_{row['molecule']}.npz"]
+        require(record["sha256"] == row["dataset"], "reference dataset lineage changed")
+        with np.load(record["path"], allow_pickle=False) as author:
+            require(
+                np.allclose(
+                    target, author["forces"][rows].reshape(-1, 3) * conversion, atol=1e-8, rtol=0
+                ),
+                "reference target force units or rows changed",
+            )
+            require(
+                np.allclose(
+                    target_energy, author["energies"][rows] * conversion, atol=1e-8, rtol=0
+                ),
+                "reference target energy units or rows changed",
+            )
+            require(
+                np.allclose(positions, author["coords"][rows].reshape(-1, 3), atol=1e-8, rtol=0)
+                and np.array_equal(numbers, np.tile(author["nuclear_charges"], len(rows))),
+                "reference geometry or atom ordering changed",
+            )
+        errors = [
+            np.abs(force[a:b] - target[a:b]).sum() / ((b - a) * 3)
+            for a, b in zip(pointers[:-1], pointers[1:])
+        ]
+        require(
+            np.isclose(
+                np.mean(errors), row["metrics"]["force_mae_eV_angstrom"], atol=1e-12, rtol=1e-10
+            )
+            and row["metrics"]["geometries"] == len(energy),
+            "false reference force metric",
+        )
+        require(
+            np.isclose(
+                np.abs(energy - target_energy).mean(),
+                row["metrics"]["energy_mae_eV"],
+                atol=1e-12,
+                rtol=1e-10,
+            ),
+            "false reference energy metric",
+        )
     secondary = read_json(safe_member(root, index["secondary"]))
     require(
         secondary["training"]["status"] == "passed"
@@ -240,15 +365,15 @@ def verify_full_gates(root: Path, report, config, observations):
     )
     learning = {}
     for molecule in config["molecules"]:
-        rows = [
+        molecular_observations = [
             x
             for x in observations
             if x["molecule"] == molecule and x["model"] == "equivariant" and x["budget"] == 1000
         ]
-        learning[molecule] = bool(rows) and all(
+        learning[molecule] = bool(molecular_observations) and all(
             x["force_mae"] <= 0.7 * x["zero_force_mae"]
             and x["force_mae"] < x["untrained_force_mae"]
-            for x in rows
+            for x in molecular_observations
         )
     require(sum(learning.values()) >= 3, "demonstrable molecular force-learning gate failed")
     for key, value in counts.items():

@@ -1,13 +1,16 @@
+import os
 import subprocess
 from pathlib import Path
 
 import numpy as np
 
-from asterion.artifacts.io import file_hash, write_json
+from asterion.artifacts.io import atomic_npz, file_hash, write_json
 from asterion.contracts.errors import ResourceError
 from asterion.contracts.units import SYMBOLS
 from asterion.data.dataset import load_rmd17
+from asterion.data.extxyz import reference_arrays
 from asterion.data.splits import author_split
+from asterion.evaluation.metrics import prediction_metrics
 
 
 def write_xyz(path, labels):
@@ -16,7 +19,8 @@ def write_xyz(path, labels):
         for label in labels:
             stream.write(f"{len(label.geometry.numbers)}\n")
             stream.write(
-                f'Properties=species:S:1:pos:R:3:forces:R:3 energy={label.energy:.17g} pbc="F F F"\n'
+                f"Properties=species:S:1:pos:R:3:REF_forces:R:3 REF_energy={label.energy:.17g} "
+                f'asterion_id="{label.geometry.identity}" pbc="F F F"\n'
             )
             for z, position, force in zip(
                 label.geometry.numbers, label.geometry.positions, label.forces
@@ -60,6 +64,7 @@ def reference_campaign(config, storage: Path, directory: Path):
             if run.exists():
                 raise ResourceError("reference comparison run already exists")
             run.mkdir(parents=True)
+            split.write(run / "split.json")
             rows = np.random.default_rng(seed).permutation(split.train_pool)[:1000]
             for role, selected in (
                 ("train", rows),
@@ -77,8 +82,8 @@ def reference_campaign(config, storage: Path, directory: Path):
                 f"--valid_file={run / 'validation.xyz'}",
                 f"--test_file={run / 'evaluation.xyz'}",
                 f"--seed={seed}",
-                "--energy_key=energy",
-                "--forces_key=forces",
+                "--energy_key=REF_energy",
+                "--forces_key=REF_forces",
                 "--E0s=average",
                 f"--r_max={config['architecture']['cutoff']}",
                 "--num_channels=24",
@@ -115,4 +120,61 @@ def reference_campaign(config, storage: Path, directory: Path):
             write_json(directory / "reference-units.json", outcomes)
             if completed.returncode:
                 raise ResourceError(f"MACE reference training failed: {molecule}/{seed}")
+            exported_model = run / "models" / f"{molecule}-{seed}.model"
+            if not exported_model.is_file() or exported_model.is_symlink():
+                raise ResourceError("MACE standard final export is absent")
+            evaluation_args = [
+                str(executable),
+                "-m",
+                "mace.cli.eval_configs",
+                f"--model={exported_model}",
+                f"--configs={run / 'evaluation.xyz'}",
+                f"--output={run / 'predictions.xyz'}",
+                "--info_prefix=PRED_",
+                "--device=cuda",
+                "--default_dtype=float32",
+                "--batch_size=8",
+            ]
+            # MACE's own trusted export is a full Torch module. Only this isolated
+            # reference process loads it; Asterion checkpoint loading remains pickle-free.
+            with (
+                (run / "evaluation.stdout").open("w") as stdout,
+                (run / "evaluation.stderr").open("w") as stderr,
+            ):
+                evaluation_process = subprocess.run(
+                    evaluation_args,
+                    stdout=stdout,
+                    stderr=stderr,
+                    timeout=12 * 3600,
+                    env={**os.environ, "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"},
+                )
+            if evaluation_process.returncode:
+                raise ResourceError("MACE retained-output evaluation failed")
+            arrays = reference_arrays(run / "predictions.xyz")
+            if arrays["identities"].tolist() != [
+                pool.geometry(row).identity for row in split.evaluation
+            ]:
+                raise ResourceError("MACE evaluation changed geometry identities")
+            atomic_npz(run / "evaluation-predictions.npz", **arrays)
+            metrics = prediction_metrics(
+                arrays["energy"],
+                arrays["force"],
+                arrays["target_energy"],
+                arrays["target_force"],
+                arrays["pointers"],
+            )
+            write_json(run / "evaluation-metrics.json", metrics)
+            outcome.update(
+                path=str(run.relative_to(directory)),
+                budget=1000,
+                training_rows=rows.tolist(),
+                model_path=str(exported_model.relative_to(run)),
+                model_sha256=file_hash(exported_model),
+                evaluation_command=evaluation_args,
+                evaluation_exit=evaluation_process.returncode,
+                predictions_sha256=file_hash(run / "evaluation-predictions.npz"),
+                selection="standard-final-export",
+                metrics=metrics,
+            )
+            write_json(directory / "reference-units.json", outcomes)
     return outcomes

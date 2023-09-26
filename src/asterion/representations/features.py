@@ -15,9 +15,17 @@ class TensorFeature:
     unit: str = "dimensionless"
 
     def validate(self, atoms: int):
+        if self.values.dtype not in {torch.float32, torch.float64}:
+            raise ContractError("irrep features require audited floating precision")
         if self.values.shape != (atoms, self.irreps.dim) or not torch.isfinite(self.values).all():
             raise ContractError("irrep feature axes or finite values violated")
-        if self.unit != "dimensionless" or not self.graph_identity:
+        if (
+            self.unit != "dimensionless"
+            or not self.graph_identity
+            or any(
+                not isinstance(identity, str) or not identity for identity in self.graph_identity
+            )
+        ):
             raise ContractError("tensor feature units or graph identity missing")
         return self
 
@@ -39,6 +47,8 @@ class ParityGate(nn.Module):
         super().__init__()
         self.irreps = irreps
         self.scalar_width = scalar_width
+        if not irreps or irreps[0].ir != o3.Irrep("0e") or not 1 <= scalar_width <= irreps[0].mul:
+            raise ContractError("parity gates require leading even scalar inputs")
         self.gates = nn.Linear(scalar_width, sum(mul for mul, ir in irreps if ir.l > 0))
 
     def forward(self, values):

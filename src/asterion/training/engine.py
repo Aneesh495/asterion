@@ -99,6 +99,9 @@ def train(
     stop_after: int | None = None,
 ):
     config.validate()
+    split.validate(len(oracle.pool))
+    if split.dataset_hash != oracle.pool.dataset_hash:
+        raise IntegrityError("training split belongs to another dataset")
     torch.set_num_threads(config.threads)
     torch.use_deterministic_algorithms(config.device == "cpu")
     dtype = torch.float64 if config.dtype == "float64" else torch.float32
@@ -120,6 +123,10 @@ def train(
         architecture,
         energy_offset=normalization["energy_per_atom"],
         energy_scale=normalization["energy_scale"],
+        level=oracle.pool.chemistry.level,
+        composition=tuple(
+            int(np.count_nonzero(oracle.pool.numbers == z)) for z in architecture.elements
+        ),
     )
     source = source_inputs()
     lineage = {

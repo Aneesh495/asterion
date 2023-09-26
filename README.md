@@ -65,5 +65,5 @@ and [benchmark methodology](docs/BENCHMARKS.md) defines measured work.
 
 CPU float64 is the reference precision. The full profile requires a CUDA accelerator with at
 least 16 GiB memory and verified force-loss double-backward. It cannot run on the available Apple
-M2 host. Full campaign assembly is also unfinished; the full preflight records a blocked result
-and exits nonzero. No release is certified and no hosted repository has been published.
+M2 host. The full coordinator is implemented; full execution and evidence coverage remain unverified.
+Preflight records missing resources and unmet test populations, then exits nonzero. No release is certified and no hosted repository has been published.

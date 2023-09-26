@@ -6,11 +6,12 @@ import torch
 from e3nn import o3
 from torch import nn
 
-from asterion.contracts.errors import ContractError
-from asterion.contracts.geometry import Batch
+from asterion.contracts.errors import ContractError, ResourceError
+from asterion.contracts.geometry import SUPPORTED_LEVELS, Batch
+from asterion.graphs.components import components
 from asterion.graphs.radial import RadialBasis
 from asterion.graphs.radius import RadiusGraph, geometry_edges
-from asterion.representations.features import ParityGate, invariant_norms
+from asterion.representations.features import ParityGate, TensorFeature, invariant_norms
 
 
 @dataclass(frozen=True)
@@ -27,16 +28,43 @@ class ModelConfig:
     expected_neighbors: float = 8.0
     energy_scale: float = 1.0
     energy_offset: float = 0.0
+    level: str = "PBE/def2-SVP"
+    composition: tuple[int, ...] | None = None
+    max_message_elements: int = 1 << 26
 
     def validate(self):
         if self.kind not in {"equivariant", "invariant", "force_head"}:
             raise ContractError("unknown original model architecture")
         if min(self.width, self.depth, self.radial) < 1 or self.lmax not in (0, 1, 2, 3):
             raise ContractError("invalid model size or angular order")
+        if self.width > 64 or self.depth > 8 or self.radial > 64:
+            raise ResourceError("model constructor exceeds the declared size budget")
+        if not all(
+            math.isfinite(value)
+            for value in (
+                self.expected_neighbors,
+                self.cutoff,
+                self.energy_scale,
+                self.energy_offset,
+            )
+        ):
+            raise ContractError("model scales and offsets must be finite")
         if self.expected_neighbors <= 0 or self.cutoff <= 0 or self.energy_scale <= 0:
             raise ContractError("invalid model scales")
         if not self.elements or not set(self.elements) <= {1, 6, 7, 8}:
             raise ContractError("unsupported elements")
+        if len(set(self.elements)) != len(self.elements):
+            raise ContractError("model vocabulary contains duplicate elements")
+        if self.level not in SUPPORTED_LEVELS:
+            raise ContractError("unsupported model label level")
+        if self.composition is not None and (
+            len(self.composition) != len(self.elements)
+            or any(not isinstance(n, int) or n < 0 for n in self.composition)
+            or not 1 <= sum(self.composition) <= 512
+        ):
+            raise ContractError("invalid trained composition")
+        if not 1 <= self.max_message_elements <= 1 << 28:
+            raise ResourceError("invalid message activation budget")
         return self
 
     def to_dict(self):
@@ -56,12 +84,18 @@ class ScalarInteraction(nn.Module):
         )
         self.update = nn.Sequential(nn.Linear(2 * width, width), nn.SiLU(), nn.Linear(width, width))
         self.normalization = normalization
+        self.irreps = o3.Irreps(f"{width}x0e")
 
     def forward(self, features, edges, radial, envelope):
+        feature = features.validate(len(features.values))
+        if feature.irreps != self.irreps:
+            raise ContractError("scalar interaction received incompatible irreps")
+        features = feature.values
         inputs = torch.cat((features[edges.source], features[edges.target], radial), dim=-1)
         messages = self.edge(inputs) * envelope[:, None]
         aggregate = scatter_sum(messages, edges.target, len(features)) / self.normalization
-        return features + self.update(torch.cat((features, aggregate), dim=-1))
+        values = features + self.update(torch.cat((features, aggregate), dim=-1))
+        return TensorFeature(values, self.irreps, feature.graph_identity).validate(len(values))
 
 
 class EquivariantInteraction(nn.Module):
@@ -77,13 +111,21 @@ class EquivariantInteraction(nn.Module):
         self.residual = o3.Linear(irreps, irreps)
         self.gate = ParityGate(irreps, width)
         self.normalization = normalization
+        self.irreps = irreps
 
     def forward(self, features, edges, radial, spherical, envelope):
+        feature = features.validate(len(features.values))
+        if feature.irreps != self.irreps:
+            raise ContractError("equivariant interaction received incompatible irreps")
+        features = feature.values
         weights = self.radial_weights(radial)
         messages = self.tensor_product(features[edges.source], spherical, weights)
         messages = messages * envelope[:, None]
         aggregate = scatter_sum(messages, edges.target, len(features)) / self.normalization
-        return (features + self.gate(self.mix(aggregate) + self.residual(features))) / math.sqrt(2)
+        values = (features + self.gate(self.mix(aggregate) + self.residual(features))) / math.sqrt(
+            2
+        )
+        return TensorFeature(values, self.irreps, feature.graph_identity).validate(len(values))
 
 
 class EnergyPotential(nn.Module, ABC):
@@ -92,9 +134,11 @@ class EnergyPotential(nn.Module, ABC):
     vocabulary: torch.Tensor
     energy_scale: torch.Tensor
     energy_offset: torch.Tensor
+    trained_composition: torch.Tensor
+    blocks: nn.ModuleList
 
     @abstractmethod
-    def atomic_energy(self, features, edges, radial, envelope) -> torch.Tensor:
+    def atomic_energy(self, features, edges, radial, envelope, graph_identity) -> torch.Tensor:
         """Return one invariant scalar per atom from the declared representation path."""
 
     def __init__(self, config: ModelConfig):
@@ -108,6 +152,11 @@ class EnergyPotential(nn.Module, ABC):
         self.register_buffer(
             "energy_offset", torch.tensor(config.energy_offset, dtype=torch.float64)
         )
+        self.register_buffer(
+            "trained_composition",
+            torch.tensor(config.composition or (), dtype=torch.long),
+            persistent=False,
+        )
 
     def element_indices(self, numbers):
         matches = numbers[:, None] == self.vocabulary[None]
@@ -117,15 +166,34 @@ class EnergyPotential(nn.Module, ABC):
 
     def energies(self, batch: Batch, edges=None):
         batch.validate()
+        if batch.chemistry.level != self.config.level:
+            raise ContractError("model and geometry electronic structure levels differ")
         edges = (
             self.graph_builder(batch)
             if edges is None
             else geometry_edges(batch, edges.source, edges.target)
         )
+        if self.config.composition is not None:
+            for component in components(batch, edges, self.config.cutoff):
+                numbers = batch.numbers[list(component)]
+                observed = (numbers[:, None] == self.vocabulary[None]).sum(0)
+                if not torch.equal(observed, self.trained_composition):
+                    raise ContractError("component composition is outside the trained model domain")
         radial = self.basis(edges.distance)
         envelope = self.basis.envelope(edges.distance)
+        dimensions = max(
+            (
+                block.tensor_product.weight_numel
+                if isinstance(block, EquivariantInteraction)
+                else 2 * self.config.width + self.config.radial
+                for block in self.blocks
+            ),
+            default=1,
+        )
+        if edges.size * dimensions > self.config.max_message_elements:
+            raise ResourceError("edge-weight activations exceed the declared message budget")
         features = self.embedding(self.element_indices(batch.numbers))
-        atomic = self.atomic_energy(features, edges, radial, envelope)
+        atomic = self.atomic_energy(features, edges, radial, envelope, batch.identities)
         atomic = atomic * self.energy_scale + self.energy_offset
         energy = scatter_sum(atomic, batch.graph, batch.size)
         # Maintain a coordinate gradient for singleton and fully disconnected graphs.
@@ -157,10 +225,13 @@ class InvariantPotential(EnergyPotential):
             nn.Linear(config.width, config.width), nn.SiLU(), nn.Linear(config.width, 1)
         )
 
-    def atomic_energy(self, features, edges, radial, envelope):
+    def atomic_energy(self, features, edges, radial, envelope, graph_identity):
+        features = TensorFeature(
+            features, o3.Irreps(f"{self.config.width}x0e"), graph_identity
+        ).validate(len(features))
         for block in self.blocks:
             features = block(features, edges, radial, envelope)
-        return self.readout(features).squeeze(-1)
+        return self.readout(features.values).squeeze(-1)
 
 
 class EquivariantPotential(EnergyPotential):
@@ -194,7 +265,7 @@ class EquivariantPotential(EnergyPotential):
             nn.Linear(invariant_size, config.width), nn.SiLU(), nn.Linear(config.width, 1)
         )
 
-    def atomic_energy(self, features, edges, radial, envelope):
+    def atomic_energy(self, features, edges, radial, envelope, graph_identity):
         if self.irreps.dim > features.shape[-1]:
             features = torch.cat(
                 (
@@ -206,8 +277,10 @@ class EquivariantPotential(EnergyPotential):
         spherical = o3.spherical_harmonics(
             self.harmonics, edges.vector, normalize=True, normalization="component"
         )
+        features = TensorFeature(features, self.irreps, graph_identity).validate(len(features))
         for block in self.blocks:
             features = block(features, edges, radial, spherical, envelope)
+        features = features.values
         invariant = [features[:, : self.config.width], invariant_norms(features, self.irreps)]
         if self.correlation is not None:
             invariant.append(self.correlation(features, features))

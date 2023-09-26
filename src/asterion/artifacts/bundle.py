@@ -4,9 +4,15 @@ import time
 from pathlib import Path
 
 from asterion.artifacts.controls import refresh_manifest
-from asterion.artifacts.io import canonical, read_json, write_json
+from asterion.artifacts.io import canonical, file_hash, read_json, safe_member, write_json
 from asterion.artifacts.source import environment, source_inputs
 from asterion.contracts.errors import IntegrityError
+
+
+def copy_observations(source: Path, target: Path):
+    if source.is_symlink() or any(p.is_symlink() for p in source.rglob("*")):
+        raise IntegrityError("symlink in scientific observations")
+    shutil.copytree(source, target)
 
 
 def build_diagnostic(config, storage: Path, runs: Path, evidence: Path):
@@ -19,9 +25,9 @@ def build_diagnostic(config, storage: Path, runs: Path, evidence: Path):
     training = read_json(runs / "training-units.json")
     copied = []
     for entry in training:
-        src = runs / entry["path"]
+        src = safe_member(runs, entry["path"])
         dst = evidence / "training" / entry["path"]
-        shutil.copytree(src, dst)
+        copy_observations(src, dst)
         copied.append(
             {
                 k: v
@@ -32,9 +38,9 @@ def build_diagnostic(config, storage: Path, runs: Path, evidence: Path):
     trajectories = read_json(runs / "simulation-units.json")
     retained = []
     for entry in trajectories:
-        src = runs / entry["path"]
+        src = safe_member(runs, entry["path"])
         dst = evidence / "trajectories" / Path(entry["path"]).name
-        shutil.copytree(src, dst)
+        copy_observations(src, dst)
         retained.append({**entry, "path": str(dst.relative_to(evidence))})
     dataset = read_json(storage / "rmd17" / "DATASETS.json")
     for record in dataset["files"]:
@@ -62,6 +68,151 @@ def build_diagnostic(config, storage: Path, runs: Path, evidence: Path):
     write_json(evidence / "ACCEPTANCE.json", report)
     (evidence / "COMMANDS.jsonl").write_bytes((runs / "COMMANDS.jsonl").read_bytes())
     refresh_manifest(evidence)
+    return report
+
+
+def authored_test_count():
+    import ast
+
+    from asterion.artifacts.source import project_root
+
+    return sum(
+        isinstance(node, ast.FunctionDef) and node.name.startswith("test_")
+        for path in (project_root() / "tests").rglob("*.py")
+        for node in ast.walk(ast.parse(path.read_text()))
+    )
+
+
+def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
+    """Copy all mandatory raw families without claiming they passed verification."""
+    report = build_diagnostic(config, storage, runs, evidence)
+    families = {
+        "properties": "properties.json",
+        "derivatives": "derivatives",
+        "analytic": "analytic",
+        "simulation_recovery": "simulation-recovery",
+        "training_recovery": "training-recovery",
+        "faults": "faults",
+        "memory": "memory-stress.json",
+        "benchmark": "benchmark.json",
+        "ablations": "ablations",
+        "acquisitions": "acquisition",
+        "reference": "reference",
+        "secondary": "secondary",
+    }
+    endpoints = {
+        "derivatives": "derivatives.json",
+        "analytic": "analytic.json",
+        "simulation_recovery": "recovery.json",
+        "training_recovery": "recovery.json",
+        "faults": "faults.json",
+        "ablations": "ablation-units.json",
+        "acquisitions": "acquisition-units.json",
+        "reference": "reference-units.json",
+        "secondary": "secondary.json",
+    }
+    index = {"junit": "gates/tests.xml", "controls": "gates/full-controls.json"}
+    destination = evidence / "gates"
+    destination.mkdir()
+    shutil.copyfile(runs / "tests.xml", destination / "tests.xml")
+    for family, relative in families.items():
+        source = safe_member(runs, relative)
+        target = destination / Path(relative).name
+        if source.is_dir():
+            copy_observations(source, target)
+            index[family] = str((target / endpoints[family]).relative_to(evidence))
+        else:
+            if source.is_symlink():
+                raise IntegrityError("symlink in gate observation")
+            shutil.copyfile(source, target)
+            index[family] = str(target.relative_to(evidence))
+    path = evidence / index["analytic"]
+    original = read_json(path)
+    write_json(path.with_name("original-analytic.json"), original)
+    relocation = {}
+    for fixture in original["outcomes"]:
+        for entry in fixture["runs"]:
+            analytic_relative = (
+                Path(entry["path"]).resolve().relative_to((runs / "analytic").resolve())
+            )
+            new = str((destination / "analytic" / analytic_relative).relative_to(evidence))
+            relocation[entry["path"]] = new
+            entry["path"] = new
+    write_json(path, original)
+    write_json(destination / "PATH_RELOCATION.json", relocation)
+    shutil.copyfile(runs / "STAGES.json", evidence / "STAGES.json")
+    write_json(evidence / "GATE_OBSERVATIONS.json", index)
+    properties = read_json(evidence / index["properties"])
+    derivatives = read_json(evidence / index["derivatives"])
+    analytic = read_json(evidence / index["analytic"])
+    faults = read_json(evidence / index["faults"])
+    memory = read_json(evidence / index["memory"])
+    recovery = sum(
+        len(read_json(evidence / index[name])["outcomes"])
+        for name in ("training_recovery", "simulation_recovery")
+    )
+    report.update(
+        profile="full",
+        status="candidate",
+        counts={
+            "semantic_tests": authored_test_count(),
+            "property_cases": len(properties["cases"]),
+            "symmetry_trials": len(derivatives["symmetry"]),
+            "force_checks": len(derivatives["force"]),
+            "hessian_checks": len(derivatives["hessian"]),
+            "analytic_dynamics": len(analytic["outcomes"]),
+            "learned_steps": report["completed_learned_steps"],
+            "recovery_cases": recovery,
+            "fault_cases": len(faults["outcomes"]),
+            "stress_seconds": memory["elapsed_seconds"],
+            "negative_controls": 0,
+        },
+        gates={f"MA{i:02}": {"status": "candidate"} for i in range(1, 13)},
+        reference={"status": "candidate"},
+        secondary={"status": "candidate"},
+    )
+    report.pop("full_acceptance", None)
+    write_json(evidence / "ACCEPTANCE.json", report)
+    refresh_manifest(evidence)
+    return report
+
+
+def promote_full(candidate: Path, final: Path, controls_path: Path, verified):
+    if final.exists() or verified.get("phase") != "candidate":
+        raise IntegrityError("full promotion requires a verified candidate and new output path")
+    control = read_json(controls_path)
+    if (
+        control["profile"] != "full"
+        or control.get("phase") != "candidate"
+        or control["positive_before"]["exit"] != 0
+        or control["positive_after"]["exit"] != 0
+        or not control["source_bundle_unchanged"]
+    ):
+        raise IntegrityError("candidate controls did not complete positively")
+    if (
+        len(control["controls"]) < 12
+        or any(row["exit"] == 0 or not row["stderr"] for row in control["controls"])
+        or sum(row["semantic_rehashed"] for row in control["controls"]) < 4
+    ):
+        raise IntegrityError("full promotion has missing or accepted negative controls")
+    report = read_json(candidate / "ACCEPTANCE.json")
+    source = read_json(candidate / "SOURCE_INPUTS.json")
+    if report["status"] != "candidate" or verified["source"] != source["digest"]:
+        raise IntegrityError("promotion verification belongs to another candidate")
+    if control.get("candidate_manifest_sha256") != file_hash(candidate / "MANIFEST.json"):
+        raise IntegrityError("controls belong to another candidate manifest")
+    if verified.get("manifest_sha256") != file_hash(candidate / "MANIFEST.json"):
+        raise IntegrityError("candidate changed after independent verification")
+    copy_observations(candidate, final)
+    index = read_json(final / "GATE_OBSERVATIONS.json")
+    shutil.copyfile(controls_path, final / index["controls"])
+    report.update(status="passed", candidate_manifest_sha256=file_hash(candidate / "MANIFEST.json"))
+    report["counts"]["negative_controls"] = len(control["controls"])
+    for key in report["gates"]:
+        report["gates"][key]["status"] = "passed"
+    report["reference"]["status"] = report["secondary"]["status"] = "passed"
+    write_json(final / "ACCEPTANCE.json", report)
+    refresh_manifest(final)
     return report
 
 

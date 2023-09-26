@@ -6,6 +6,8 @@ import torch
 
 from asterion.contracts.errors import ContractError, ResourceError
 
+SUPPORTED_LEVELS = frozenset({"PBE/def2-SVP", "PBE+MBD", "analytic"})
+
 
 @dataclass(frozen=True)
 class Chemistry:
@@ -22,8 +24,8 @@ class Chemistry:
             raise ContractError("elements must be nonempty and unique")
         if not set(self.elements) <= {1, 6, 7, 8}:
             raise ContractError("supported elements are H,C,N,O")
-        if not self.level:
-            raise ContractError("electronic structure level must be explicit")
+        if self.level not in SUPPORTED_LEVELS:
+            raise ContractError("unsupported electronic structure level")
 
 
 @dataclass(frozen=True)
@@ -92,17 +94,21 @@ class Batch:
     identities: tuple[str, ...]
     energy: torch.Tensor | None = None
     forces: torch.Tensor | None = None
+    chemistry: Chemistry = Chemistry()
 
     @property
     def size(self):
         return len(self.identities)
 
     def validate(self, max_atoms: int = 8192):
+        self.chemistry.validate()
         n = len(self.numbers)
         if not n or n > max_atoms:
             raise ResourceError("empty or oversized batch")
         if self.positions.shape != (n, 3) or self.graph.shape != (n,):
             raise ContractError("invalid atom axes")
+        if self.positions.dtype not in {torch.float32, torch.float64}:
+            raise ContractError("positions require audited float32 or float64 precision")
         if self.pointers.shape != (self.size + 1,) or self.pointers[0].item() != 0:
             raise ContractError("invalid graph pointers")
         if self.pointers[-1].item() != n or (self.pointers.diff() <= 0).any():
@@ -158,4 +164,5 @@ def collate(items: list[Geometry | Label], dtype=torch.float64, device="cpu") ->
         )
         if labeled
         else None,
+        geometries[0].chemistry,
     ).validate()

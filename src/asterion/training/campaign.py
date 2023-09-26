@@ -1,3 +1,4 @@
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
@@ -42,6 +43,15 @@ def validate_campaign(config):
             or len(config["seeds"]) != 3
         ):
             raise ContractError("full campaign population is fixed")
+        from asterion.artifacts.source import project_root
+
+        frozen = read_json(project_root() / "configs/full.json")
+        observed = deepcopy(config)
+        # Interpreter location is host-specific. Scientific and resource budgets are not.
+        observed.get("reference", {}).pop("python", None)
+        frozen.get("reference", {}).pop("python", None)
+        if observed != frozen:
+            raise ContractError("full workload differs from the frozen research configuration")
     return config
 
 

@@ -29,3 +29,9 @@ integration and reports drift. An explicit failed trajectory can be a valid dete
 Negative controls operate on disposable copies. Semantic controls update hashes before invoking
 the verifier. Their nonzero exits and diagnostics are retained. Diagnostic controls validate the
 diagnostic verifier, not the still-pending full research evidence verifier.
+
+Full evidence has candidate and final phases. A candidate contains every scientific raw family
+and has candidate status. Read-only candidate verification enforces full thresholds while requiring
+controls to be absent. Controls invoke that same checker before, during and after corruption.
+Promotion creates a new final directory only when candidate and control manifest identities match.
+Default full verification and release reject candidate status. The candidate remains unchanged.

@@ -22,8 +22,8 @@ independent unit and identity checks. Reacquire using the pinned author release 
 
 `make train RUN_ID=... CONFIG=configs/full.json` selects the full original training matrix.
 `make acceptance RUN_ID=...` performs full preflight and records any blocked gate without
-claiming success. Full campaign assembly is not yet complete. An accelerator is required by
-the full resource profile. No paid compute is provisioned by these commands.
+claiming success. The full stage coordinator and candidate promotion are implemented but the complete campaign
+remains unverified. An accelerator is required by the full resource profile. No paid compute is provisioned by these commands.
 
 The package pins Python 3.12.14, PyTorch 2.8.0 and e3nn 0.5.7. The uv lock pins transitive versions
 and artifact hashes. CPU diagnostic arithmetic is float64. Deterministic CPU continuation is

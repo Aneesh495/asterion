@@ -1,6 +1,45 @@
 # Build status
 
-Phase: source-bound CPU diagnostic verified; full specification incomplete.
+Phase: full campaign orchestration and typed scientific contracts. Full delivery remains incomplete.
+
+The current source passes 246 collected tests, 113 authored test functions, Ruff and mypy.
+Full acceptance now executes a fixed stage plan through an exclusive coordinator, bounded
+subprocesses, retained exits/logs/output hashes and immutable completed-stage continuation.
+Full budgets must match configs/full.json. Candidate verification enforces the scientific
+workload before corruption controls; candidate status cannot satisfy release verification.
+Interrupted-stage continuation is still being hardened.
+
+Every interaction now consumes and returns irrep/graph-tagged tensor features. Training records
+electronic level and composition. Inference rejects mismatched tasks and validates each active
+connected component, preserving separated-copy additivity. Constructor and edge-weight budgets
+reject oversized allocations. Analytic labels use a separate explicit task identity.
+
+The reference adapter exports REF labels, executes the pinned MACE evaluation CLI after its own
+training, parses bounded retained XYZ, and saves raw physical predictions. Full verification
+checks source labels, atom order, unique rows, denominators, model bytes and independently
+recomputed metrics. Its separate environment and full retraining remain unexecuted.
+
+Historical run frozen-diagnostic-03 belongs to execution commit
+6a99cd8210752e2e32bd8bebad75057479eb964f, source digest
+7ca0c4acc802f7828c449d47db9f440be7860e274eaf8f1ed5257f6371d9a364.
+Its six models, 2250 learned steps and 16 negative controls verified. Its 30-minute stress
+completed 187406 calls, with 417398784 bytes sampled peak RSS and zero post-warmup growth.
+Learned-committee-03 trained three members on the same 100 labels: held-out force MAE
+0.097912 eV/angstrom, error-ranking Spearman 0.6154 and observed coverage 0.9141 on 256 geometries.
+The 252-geometry guarded shift gave MAE 0.094420, ranking 0.6255 and coverage 0.9246.
+A calibrated-uncertainty trajectory completed 100 steps. These do not establish acquisition
+advantage, chemical transfer or full acceptance.
+
+The exact source-03 checkout is preserved at sibling asterion-diagnostic-source. Current code
+changes invalidate using its bundle to certify current development. A new source freeze and
+execution are required. The 400-authored-test gate and private implementation-depth gate remain
+unmet. CUDA is unavailable, the reference environment is absent, and GitHub publication is absent.
+
+Next: complete acquisition/secondary raw checks, paired block learning intervals, exact guarded
+shift populations, interruption continuation, reference compatibility, acquisition/uncertainty
+viewer paths, substantive tests, then fresh source-bound execution. No workload gate was lowered.
+
+## Earlier source-02 execution record
 
 Packaging follow-up: installed-wheel repository discovery failed and has been repaired. Seven
 independent runtime/lineage regressions were added; 171 tests now pass. A new source freeze and

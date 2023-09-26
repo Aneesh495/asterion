@@ -12,7 +12,7 @@ from asterion.artifacts.bundle import CommandJournal, build_diagnostic
 from asterion.artifacts.controls import controls
 from asterion.artifacts.io import read_json, write_json
 from asterion.artifacts.source import environment, project_root, source_inputs
-from asterion.contracts.errors import AsterionError, ContractError, IntegrityError, ResourceError
+from asterion.contracts.errors import AsterionError, ContractError, IntegrityError
 from asterion.contracts.units import thermal_velocities
 from asterion.data.dataset import load_rmd17
 from asterion.data.release import acquire_rmd17
@@ -188,40 +188,14 @@ def doctor(config, storage):
     return result
 
 
-def full_acceptance(config, storage, runs, evidence):
-    from asterion.artifacts.verify import FULL_REQUIREMENTS
+def full_acceptance(config, storage, runs, evidence, config_path, resume=False):
+    from asterion.artifacts.campaign import execute_research
 
     if config["profile"] != "full":
         raise ContractError(
             "make acceptance requires configs/full.json; use diagnostic for bounded evidence"
         )
-    if evidence.exists():
-        raise IntegrityError("acceptance evidence ID already exists")
-    evidence.mkdir(parents=True)
-    source = source_inputs()
-    write_json(evidence / "SOURCE_INPUTS.json", source)
-    write_json(evidence / "ENVIRONMENT.json", environment())
-    write_json(evidence / "CAMPAIGN.json", config)
-    if source["dirty"]:
-        reason = "uncommitted executable inputs"
-    elif not torch.cuda.is_available():
-        reason = "full profile requires a CUDA accelerator with measured force-loss double-backward"
-    elif torch.cuda.get_device_properties(0).total_memory < 16 * 1024**3:
-        reason = "full profile requires at least 16 GiB accelerator memory"
-    else:
-        reason = "full campaign integration and independent coverage gates remain unverified"
-    write_json(
-        evidence / "ACCEPTANCE.json",
-        {
-            "profile": "full",
-            "status": "blocked",
-            "reason": reason,
-            "source": source["digest"],
-            "requirements": FULL_REQUIREMENTS,
-            "gates": {f"MA{i:02}": {"status": "unverified"} for i in range(1, 13)},
-        },
-    )
-    raise ResourceError(reason)
+    return execute_research(config, config_path, storage, runs, evidence, resume)
 
 
 def dispatch(args):
@@ -232,9 +206,14 @@ def dispatch(args):
     if args.command == "verify":
         from asterion.artifacts.verify import verify
 
-        return verify(args.evidence, args.profile or config["profile"])
+        return verify(args.evidence, args.profile or config["profile"], candidate=args.candidate)
     if args.command == "controls":
-        return controls(args.evidence, runs / "controls.json", args.profile or config["profile"])
+        return controls(
+            args.evidence,
+            runs / "controls.json",
+            args.profile or config["profile"],
+            candidate=args.candidate,
+        )
     if args.command == "doctor":
         return doctor(config, storage)
     if args.command == "data":
@@ -247,7 +226,7 @@ def dispatch(args):
 
         return check_docs(root)
     if args.command == "acceptance":
-        return full_acceptance(config, storage, runs, args.evidence)
+        return full_acceptance(config, storage, runs, args.evidence, args.config, args.resume)
     if args.command == "release":
         from asterion.artifacts.verify import verify
 
@@ -346,6 +325,11 @@ def main():
     parser.add_argument("--evidence", type=Path, default=Path("evidence/diagnostic"))
     parser.add_argument("--profile", choices=("full", "diagnostic"))
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--candidate",
+        action="store_true",
+        help="check a full candidate without granting release status",
+    )
     args = parser.parse_args()
     if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}", args.run_id):
         parser.error("run-id must be a bounded simple identifier")

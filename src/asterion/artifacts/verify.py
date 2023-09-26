@@ -336,7 +336,7 @@ def verify_training(root: Path, entry, source, datasets, profile):
     }
 
 
-def verify(root: Path, expected_profile="full"):
+def verify(root: Path, expected_profile="full", candidate=False):
     root = root.resolve()
     check_manifest(root)
     source = check_source(root)
@@ -345,8 +345,18 @@ def verify(root: Path, expected_profile="full"):
         report["profile"] == expected_profile,
         "profile mismatch; diagnostic evidence cannot certify full research",
     )
-    require(report["status"] == "passed", "bundle declares an incomplete campaign")
+    require(
+        not candidate or expected_profile == "full", "candidate verification requires full profile"
+    )
+    require(
+        report["status"] == ("candidate" if candidate else "passed"),
+        "bundle declares an incomplete campaign",
+    )
     config = read_json(root / "CAMPAIGN.json")
+    if expected_profile == "full":
+        from asterion.training.campaign import validate_campaign
+
+        validate_campaign(config)
     require(config["profile"] == expected_profile, "campaign profile lineage mismatch")
     datasets = check_dataset(read_json(root / "DATASETS.json"))
     units = read_json(root / "UNITS.json")
@@ -420,7 +430,7 @@ def verify(root: Path, expected_profile="full"):
     if expected_profile == "full":
         from asterion.artifacts.full_gates import verify_full_gates
 
-        verify_full_gates(root, report, config, observations)
+        verify_full_gates(root, report, config, observations, candidate=candidate)
         required_starts = {
             (m, seed, kelvin, start)
             for m in config["molecules"]
@@ -451,16 +461,26 @@ def verify(root: Path, expected_profile="full"):
             "core learned trajectory completion is below 90 percent",
         )
         for key, threshold in FULL_REQUIREMENTS.items():
+            if candidate and key == "negative_controls":
+                require(
+                    report["counts"].get(key) == 0,
+                    "candidate cannot claim controls before execution",
+                )
+                continue
             require(report["counts"].get(key, 0) >= threshold, f"full requirement unmet: {key}")
         require(
             learned_steps >= FULL_REQUIREMENTS["learned_steps"], "million-step dynamics gate unmet"
         )
         require(
-            report["reference"]["status"] == "passed" and report["secondary"]["status"] == "passed",
+            report["reference"]["status"] == ("candidate" if candidate else "passed")
+            and report["secondary"]["status"] == ("candidate" if candidate else "passed"),
             "reference retraining or extended-system study absent",
         )
         require(
-            all(item["status"] == "passed" for item in report["gates"].values()),
+            all(
+                item["status"] == ("candidate" if candidate else "passed")
+                for item in report["gates"].values()
+            ),
             "full profile has unmet gates",
         )
     import json
@@ -472,7 +492,9 @@ def verify(root: Path, expected_profile="full"):
     )
     require(report["source"] == source["digest"], "report source identity mismatch")
     return {
-        "status": "passed",
+        "status": "candidate-verified" if candidate else "passed",
+        "phase": "candidate" if candidate else "final",
+        "manifest_sha256": file_hash(root / "MANIFEST.json"),
         "profile": expected_profile,
         "source": source["digest"],
         "training_runs": len(observations),

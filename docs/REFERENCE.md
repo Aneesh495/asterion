@@ -17,3 +17,15 @@ This command requires CUDA and uses 1000 training structures per molecule and se
 environment is not yet lock-verified or executed. Its compatibility, checkpoints and prediction
 reproduction must be established before MA05 or a comparison result can pass. No pretrained
 scores from the MACE publication are used as observed Asterion results.
+
+Labels use REF_energy and REF_forces to avoid ASE reserved-key relocation. After training,
+the named standard final export is evaluated with the pinned eval_configs CLI. Retained XYZ
+has PRED fields and original identities. A bounded original parser saves NPZ arrays, and the
+full checker compares targets to author files and independently recomputes errors. Reference
+selection uses the standard final export, distinct from Asterion validation-force selection.
+Equal parameter counts or identical reference selection criteria are not claimed.
+
+MACE serializes its export as a full Torch module. Only the separate reference process loads its
+own newly trained export. Asterion verification never loads that executable format; original
+checkpoints remain JSON plus safetensors. The intended API is pinned to
+[MACE v0.3.14 eval_configs](https://github.com/ACEsuit/mace/blob/v0.3.14/mace/cli/eval_configs.py).
