@@ -33,16 +33,29 @@ def paired_block_interval(first, second, blocks, seed=491, repetitions=2000):
     first, second, blocks = np.asarray(first), np.asarray(second), np.asarray(blocks)
     if first.shape != second.shape or first.shape != blocks.shape or not len(first):
         raise ContractError("paired block comparison requires matched nonempty units")
+    if (
+        first.ndim != 1
+        or not np.isfinite(first).all()
+        or not np.isfinite(second).all()
+        or repetitions < 1
+    ):
+        raise ContractError(
+            "finite one-dimensional paired errors and positive repetitions required"
+        )
+    if blocks.dtype.kind in "fiu" and not np.isfinite(blocks).all():
+        raise ContractError("nonfinite temporal block identities")
     unique = np.unique(blocks)
     if len(unique) < 2:
         raise ContractError("uncertainty requires >=2 independent declared blocks")
-    differences = np.array(
-        [(first[blocks == block] - second[blocks == block]).mean() for block in unique]
+    totals = np.array(
+        [(first[blocks == block] - second[blocks == block]).sum() for block in unique]
     )
+    counts = np.array([(blocks == block).sum() for block in unique])
     rng = np.random.default_rng(seed)
-    samples = rng.choice(differences, size=(repetitions, len(unique)), replace=True).mean(1)
+    indices = rng.integers(0, len(unique), size=(repetitions, len(unique)))
+    samples = totals[indices].sum(1) / counts[indices].sum(1)
     return {
-        "mean_improvement": float(differences.mean()),
+        "mean_improvement": float((first - second).mean()),
         "lower_95": float(np.quantile(samples, 0.025)),
         "upper_95": float(np.quantile(samples, 0.975)),
         "blocks": len(unique),

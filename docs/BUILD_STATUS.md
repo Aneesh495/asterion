@@ -2,7 +2,7 @@
 
 Phase: full campaign orchestration and typed scientific contracts. Full delivery remains incomplete.
 
-The current source passes 246 collected tests, 113 authored test functions, Ruff and mypy.
+The current source passes 268 collected tests, 135 authored test functions, Ruff and mypy.
 Full acceptance now executes a fixed stage plan through an exclusive coordinator, bounded
 subprocesses, retained exits/logs/output hashes and immutable completed-stage continuation.
 Full budgets must match configs/full.json. Candidate verification enforces the scientific
@@ -35,9 +35,14 @@ changes invalidate using its bundle to certify current development. A new source
 execution are required. The 400-authored-test gate and private implementation-depth gate remain
 unmet. CUDA is unavailable, the reference environment is absent, and GitHub publication is absent.
 
-Next: complete acquisition/secondary raw checks, paired block learning intervals, exact guarded
-shift populations, interruption continuation, reference compatibility, acquisition/uncertainty
-viewer paths, substantive tests, then fresh source-bound execution. No workload gate was lowered.
+Acquisition now retains raw member calibration and candidate-pool predictions. Independent
+checking replays model weights, reconstructs mean/disagreement/coverage and greedy policy choices,
+and checks shared initial pools and reveal lineage. Secondary checking replays saved models and
+actual trajectories. Paired temporal-block learning intervals and exact guarded shift counts are
+implemented; their end-to-end artifact checks are being exercised.
+
+Next: finish interruption continuation, reference compatibility, acquisition/uncertainty viewer
+paths, substantive tests and fresh source-bound execution. No workload gate was lowered.
 
 ## Earlier source-02 execution record
 

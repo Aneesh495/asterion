@@ -35,3 +35,10 @@ Full gates require 400 authored semantic tests, 10,000 generated contract cases,
 trials, 1000 force checks, 100 Hessian checks, 100 analytic fixtures at three timesteps,
 50 recovery cases, 100 failure cases, a 30-minute memory stress and real verifier controls.
 `make acceptance` never replaces these with the diagnostic profile.
+
+Paired learning uncertainty uses original temporal index blocks of span 1000, with 2000
+block-bootstrap repetitions and seed 491. The point estimate remains geometry weighted;
+resampled block totals divide by resampled geometry counts. Positive lower bounds are required
+against zero force and the untrained model for the full learning gate. Blocks are a correlation
+heuristic and do not establish independent molecular conformations. Shift selection oversamples
+permitted temporal candidates, excludes every primary role, and retains the exact declared count.

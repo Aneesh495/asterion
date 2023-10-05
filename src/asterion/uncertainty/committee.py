@@ -13,6 +13,8 @@ class Disagreement:
     force_component_std: np.ndarray
     force_score: np.ndarray
     identities: np.ndarray
+    member_forces: np.ndarray
+    member_energies: np.ndarray
 
 
 class Committee:
@@ -61,6 +63,8 @@ class Committee:
             force_std,
             scores,
             np.array([g.identity for g in geometries]),
+            force_stack,
+            energy_stack,
         )
 
     def calibrate(self, labels, alpha=0.1):

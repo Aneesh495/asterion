@@ -58,7 +58,7 @@ def secondary_campaign(config, storage: Path, directory: Path):
         )
         trajectories.append({"start": start, "record": record, "replay": replay_trajectory(run)})
     result = {
-        "dataset": manifest,
+        "dataset": {**manifest, "path": str(path.resolve())},
         "training": result,
         "metrics": metrics,
         "trajectories": trajectories,

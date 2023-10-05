@@ -14,10 +14,10 @@ requirements. Parameterized cases do not create additional authored test functio
 collected tests do not satisfy the 400 authored-test gate. No generated filler is counted.
 
 The full acceptance command now orchestrates and assembles declared full stages after preflight.
-The complete full path remains unexecuted and fails closed on missing requirements. Full gate checking exists but has no valid full positive bundle. Some full checks
-still trust retained secondary/reference summaries more than their required raw model provenance.
-Diagnostic control results cannot certify that unfinished path. Paired block uncertainty is a
-library function, but the full learning gate has not yet integrated its required confidence interval.
+The complete full path remains unexecuted and fails closed on missing requirements. Full gate checking exists but has no valid full positive bundle. Reference, acquisition and secondary checks now compare raw labels, predictions, saved weights
+and trajectories. Complete full positive execution remains unavailable.
+Diagnostic control results cannot certify that unfinished path. Paired block uncertainty is now integrated into the full learning gate. Its full cross-molecule
+result remains unexecuted.
 
 The diagnostic trains one molecule at one budget. It does not execute the 72-run primary matrix,
 the two-molecule three-seed acquisition matrix, full ablations, independent MACE retraining, or the
@@ -26,8 +26,7 @@ learning in those runs is retained. No superiority, calibrated generalization or
 claim follows from them.
 
 The author-split protocol contains correlated geometries. Audit descriptors expose close structures,
-but do not prove independent conformations. Temporal shift exclusions can shorten the configured
-shift population. Exact geometry-cluster independence is not established. MD22 units and hashes are
+but do not prove independent conformations. Temporal shift selection now oversamples before exclusions and rejects any shortened population. Exact geometry-cluster independence is not established. MD22 units and hashes are
 checked, but redistribution rights and its full study remain unverified.
 
 Irrep feature contracts are now enforced at the actual interaction boundaries. Electronic levels

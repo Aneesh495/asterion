@@ -7,7 +7,7 @@ import numpy as np
 from asterion.artifacts.io import file_hash, object_hash, read_json, safe_member
 from asterion.artifacts.source import project_root, source_inputs
 from asterion.contracts.errors import IntegrityError
-from asterion.contracts.geometry import Geometry, collate
+from asterion.contracts.geometry import Chemistry, Geometry, collate
 from asterion.evaluation.replay import replay_trajectory
 from asterion.training.checkpoint import load_checkpoint
 
@@ -141,7 +141,18 @@ def read_arrays(path):
         return {key: data[key] for key in data.files}
 
 
-def verify_training(root: Path, entry, source, datasets, profile):
+def verify_training(
+    root: Path,
+    entry,
+    source,
+    datasets,
+    profile,
+    expected_architecture=None,
+    expected_loss=None,
+    intervals_required=True,
+):
+    family = entry.get("dataset_family", "rmd17")
+    require(family in {"rmd17", "md22"}, "unsupported evidence dataset family")
     directory = safe_member(root, entry["path"])
     config = read_json(directory / "config.json")
     split = read_json(directory / "split.json")
@@ -160,6 +171,29 @@ def verify_training(root: Path, entry, source, datasets, profile):
         require(all(not set(rows) & set(other) for other in roles[i + 1 :]), "label roles overlap")
     revealed, reveal_hash = check_reveals(directory, split)
     train_config = config["training"]
+    require(
+        config["architecture"]["kind"] == entry["model"] and train_config["seed"] == entry["seed"],
+        "model kind or seed differs from declared unit",
+    )
+    if profile == "full":
+        campaign = read_json(root / "CAMPAIGN.json")
+        require(
+            train_config["epochs"] == campaign["epochs"]
+            and train_config["batch_size"] == campaign["batch_size"],
+            "training workload differs from frozen full configuration",
+        )
+        architecture = (
+            expected_architecture if expected_architecture is not None else campaign["architecture"]
+        )
+        loss = expected_loss if expected_loss is not None else campaign["training"]
+        require(
+            all(config["architecture"][key] == value for key, value in architecture.items()),
+            "trained architecture differs from declared experiment",
+        )
+        require(
+            all(train_config[key] == value for key, value in loss.items()),
+            "training precision or objective differs from declared experiment",
+        )
     require(
         len(revealed) == train_config["budget"] == entry["budget"], "training label budget mismatch"
     )
@@ -194,6 +228,10 @@ def verify_training(root: Path, entry, source, datasets, profile):
         "selection epoch does not match raw validation history",
     )
     model, checkpoint = load_checkpoint(directory / selection["checkpoint"])
+    require(
+        model.config.level == ("PBE/def2-SVP" if family == "rmd17" else "PBE+MBD"),
+        "trained model electronic level differs from its dataset family",
+    )
     initial, initial_record = load_checkpoint(directory / "initial")
     require(
         checkpoint["origin"] == "original-force-loss-training" and checkpoint["updates"] > 0,
@@ -231,20 +269,38 @@ def verify_training(root: Path, entry, source, datasets, profile):
         "evaluation rows changed or repeated",
     )
     if profile == "full":
-        require(len(rows) >= 5000, "shortened held-out geometry workload")
+        require(
+            len(rows) >= (5000 if family == "rmd17" else 1000),
+            "shortened held-out geometry workload",
+        )
     molecule = entry["molecule"]
-    path = datasets[f"rmd17_{molecule}.npz"]
+    path = datasets[f"rmd17_{molecule}.npz"] if family == "rmd17" else datasets["md22"]
     require(
         file_hash(path) == config["dataset"] == split["dataset_hash"],
         "training dataset lineage mismatch",
     )
     with np.load(path, allow_pickle=False) as reference:
-        energies = reference["energies"][rows]
-        forces = reference["forces"][rows].reshape(-1, 3)
-        coordinates = reference["coords"][rows].reshape(-1, 3)
-        numbers = np.tile(reference["nuclear_charges"], len(rows))
-        train_energies = reference["energies"][revealed]
+        energy_key, force_key, coordinate_key, numbers_key = (
+            ("energies", "forces", "coords", "nuclear_charges")
+            if family == "rmd17"
+            else ("E", "F", "R", "z")
+        )
+        energies = reference[energy_key][rows].reshape(-1)
+        forces = reference[force_key][rows].reshape(-1, 3)
+        coordinates = reference[coordinate_key][rows].reshape(-1, 3)
+        numbers = np.tile(reference[numbers_key], len(rows))
+        train_energies = reference[energy_key][revealed]
+        train_forces = reference[force_key][revealed]
+        expected_composition = tuple(
+            int(np.count_nonzero(reference[numbers_key] == z)) for z in model.config.elements
+        )
+        original_indices = reference["old_indices"][rows] if family == "rmd17" else np.asarray(rows)
     conversion = 4184 / (6.02214076e23 * 1.602176634e-19)
+    require(
+        model.config.composition is not None
+        and tuple(model.config.composition) == expected_composition,
+        "trained composition metadata differs from source atoms",
+    )
     require(
         np.allclose(arrays["target_energy"], energies * conversion, atol=1e-10, rtol=0),
         "swapped physical energy units",
@@ -287,6 +343,65 @@ def verify_training(root: Path, entry, source, datasets, profile):
         np.isclose(zero_geometry.mean(), metrics["zero_force"]["force_mae_eV_angstrom"]),
         "missing or false zero-force baseline",
     )
+    mean = read_arrays(directory / "evaluation-mean-force.npz")
+    expected_force = np.tile(train_forces.mean(0) * conversion, (len(rows), 1))
+    expected_energy = np.repeat(train_energies.mean() * conversion, len(rows))
+    require(
+        np.allclose(mean["force"], expected_force, atol=1e-12, rtol=1e-10)
+        and np.allclose(mean["energy"], expected_energy, atol=1e-10, rtol=0),
+        "mean-force baseline is not fitted on training-only labels",
+    )
+    mean_errors = np.asarray(
+        [
+            np.abs(expected_force[a:b] - arrays["target_force"][a:b]).mean()
+            for a, b in zip(arrays["pointers"][:-1], arrays["pointers"][1:])
+        ]
+    )
+    require(
+        np.isclose(
+            mean_errors.mean(),
+            metrics["mean_force"]["force_mae_eV_angstrom"],
+            atol=1e-12,
+            rtol=1e-10,
+        ),
+        "false mean-force baseline metric",
+    )
+    if profile == "full" and family == "rmd17" and intervals_required:
+        paired = read_json(directory / "learning-paired.json")
+        require(
+            paired["temporal_block_span_original_indices"] == 1000
+            and paired["geometry_count"] == len(rows),
+            "learning interval blocks or denominators changed",
+        )
+        labels = original_indices // 1000
+        unique = np.unique(labels)
+        require(len(unique) >= 2, "learning uncertainty has insufficient temporal blocks")
+        for name, baseline in (
+            ("zero_force", zero_geometry),
+            ("untrained", initial_computed["geometry_force_mae"]),
+        ):
+            differences = baseline - computed["geometry_force_mae"]
+            sums = np.asarray(
+                [sum(float(x) for x in differences[labels == block]) for block in unique]
+            )
+            sizes = np.asarray([np.count_nonzero(labels == block) for block in unique])
+            draws = np.random.default_rng(491).integers(0, len(unique), size=(2000, len(unique)))
+            samples = np.asarray([sums[index].sum() / sizes[index].sum() for index in draws])
+            expected = {
+                "mean_improvement": float(differences.mean()),
+                "lower_95": float(np.quantile(samples, 0.025)),
+                "upper_95": float(np.quantile(samples, 0.975)),
+                "blocks": len(unique),
+                "repetitions": 2000,
+                "seed": 491,
+            }
+            require(
+                all(
+                    np.isclose(paired["comparisons"][name][key], value, atol=1e-12, rtol=1e-10)
+                    for key, value in expected.items()
+                ),
+                "paired learning interval disagrees with independent block resampling",
+            )
     # Probe selection depends on frozen source and geometry identity rather than a handpicked prefix.
     selected = sorted(
         range(len(rows)),
@@ -299,6 +414,7 @@ def verify_training(root: Path, entry, source, datasets, profile):
             arrays["numbers"][begin:end],
             arrays["positions"][begin:end],
             str(arrays["identities"][i]),
+            Chemistry(level=model.config.level),
         )
         energy, force = model(collate([geometry]))
         require(
@@ -333,6 +449,10 @@ def verify_training(root: Path, entry, source, datasets, profile):
         "untrained_force_mae": initial_computed["force_mae_eV_angstrom"],
         "probes": len(selected),
         "checkpoint": checkpoint["identity"],
+        "positive_learning_interval": profile != "full"
+        or family != "rmd17"
+        or not intervals_required
+        or all(value["lower_95"] > 0 for value in paired["comparisons"].values()),
     }
 
 

@@ -11,7 +11,7 @@ from asterion.data.splits import author_split, geometry_descriptors
 from asterion.evaluation.metrics import uncertainty_metrics
 from asterion.models.potential import ModelConfig
 from asterion.training.checkpoint import load_checkpoint
-from asterion.training.engine import TrainConfig, evaluate_run, train
+from asterion.training.engine import TrainConfig, evaluate_run, predict, train
 from asterion.uncertainty.committee import Committee
 
 
@@ -98,6 +98,14 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                     calibration, calibration_prediction, calibration_errors = committee.calibrate(
                         calibration_labels
                     )
+                    for member, model in enumerate(models, 1):
+                        calibration_arrays, _ = predict(
+                            model, calibration_labels, config["batch_size"]
+                        )
+                        atomic_npz(
+                            run / f"calibration-{round_index}-member-{member}.npz",
+                            **calibration_arrays,
+                        )
                     write_json(run / f"calibration-{round_index}.json", asdict(calibration))
                     atomic_npz(
                         run / f"calibration-{round_index}.npz",
@@ -133,6 +141,16 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         pointers=pointers,
                     )
                     disagreement = committee.infer([pool.geometry(row) for row in split.train_pool])
+                    atomic_npz(
+                        run / f"candidate-pool-{round_index}.npz",
+                        identities=disagreement.identities,
+                        member_forces=disagreement.member_forces,
+                        member_energies=disagreement.member_energies,
+                        positions=pool.positions[list(split.train_pool)].reshape(-1, 3),
+                        numbers=np.tile(pool.numbers, len(split.train_pool)),
+                        pointers=np.arange(len(split.train_pool) + 1) * len(pool.numbers),
+                        scores=disagreement.force_score,
+                    )
                     outcomes.append(
                         {
                             "molecule": molecule,
@@ -144,6 +162,10 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                             "metrics": metrics,
                             "uncertainty": uncertainty,
                             "completed_labels": len(ledger.revealed),
+                            "path": str(run.relative_to(directory)),
+                            "members": [
+                                f"round-{round_index}-member-{member}" for member in (1, 2, 3)
+                            ],
                         }
                     )
                     write_json(directory / "acquisition-units.json", outcomes)

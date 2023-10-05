@@ -208,6 +208,15 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         )
         counts["negative_controls"] = len(controls["controls"])
     acquisitions = read_json(safe_member(root, index["acquisitions"]))
+    from asterion.artifacts.studies import verify_acquisition
+
+    dataset_paths = {
+        record["name"]: Path(record["path"])
+        for record in read_json(root / "DATASETS.json")["files"]
+    }
+    verify_acquisition(
+        root, index["acquisitions"], config, read_json(root / "SOURCE_INPUTS.json"), dataset_paths
+    )
     expected = {
         (m, s, p, b)
         for m in config["acquisition_molecules"]
@@ -356,6 +365,9 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
             "false reference energy metric",
         )
     secondary = read_json(safe_member(root, index["secondary"]))
+    from asterion.artifacts.studies import verify_secondary
+
+    verify_secondary(root, index["secondary"], config, read_json(root / "SOURCE_INPUTS.json"))
     require(
         secondary["training"]["status"] == "passed"
         and len(secondary["trajectories"]) >= 10
@@ -373,6 +385,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         learning[molecule] = bool(molecular_observations) and all(
             x["force_mae"] <= 0.7 * x["zero_force_mae"]
             and x["force_mae"] < x["untrained_force_mae"]
+            and x["positive_learning_interval"]
             for x in molecular_observations
         )
     require(sum(learning.values()) >= 3, "demonstrable molecular force-learning gate failed")

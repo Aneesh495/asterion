@@ -139,23 +139,44 @@ def evaluate_campaign(config, storage: Path, directory: Path):
         result = evaluate_run(oracle, split, run, config["batch_size"])
         audit = audit_leakage(pool, split)
         write_json(run / "leakage.json", audit)
-        # Shift evaluation excludes every role used for fitting, selection and calibration.
-        frozen = guarded_split(
-            pool,
-            entry["seed"],
-            evaluation_size=config["evaluation_size"],
-            validation_size=config["validation_size"],
-            calibration_size=config["calibration_size"],
+        from asterion.evaluation.metrics import paired_block_interval
+
+        blocks = pool.original_indices[list(split.evaluation)] // 1000
+        comparisons = {}
+        for baseline in ("zero_force", "untrained"):
+            comparisons[baseline] = paired_block_interval(
+                result[baseline]["geometry_force_mae"],
+                result["trained"]["geometry_force_mae"],
+                blocks,
+            )
+        write_json(
+            run / "learning-paired.json",
+            {
+                "temporal_block_span_original_indices": 1000,
+                "geometry_count": len(split.evaluation),
+                "comparisons": comparisons,
+                "assumption": "temporal blocks are a declared correlation heuristic, not a proof of independence",
+            },
         )
+        # Shift evaluation excludes every role used for fitting, selection and calibration.
         forbidden = (
             set(split.train_pool)
             | set(split.validation)
             | set(split.calibration)
             | set(split.evaluation)
         )
-        shifted = tuple(row for row in frozen.evaluation if row not in forbidden)
-        if not shifted:
-            raise ContractError("guarded shift has no distinct evaluation identities")
+        frozen = guarded_split(
+            pool,
+            entry["seed"],
+            evaluation_size=config["evaluation_size"] + len(forbidden),
+            validation_size=config["validation_size"],
+            calibration_size=config["calibration_size"],
+        )
+        shifted = tuple(row for row in frozen.evaluation if row not in forbidden)[
+            : config["evaluation_size"]
+        ]
+        if len(shifted) != config["evaluation_size"]:
+            raise ContractError("guarded shift cannot meet the frozen distinct evaluation count")
         stress = replace(split, protocol="temporal-held-out-shift", evaluation=shifted)
         stress.write(run / "shift-split.json")
         # Preserve the primary artifact while a separately named evaluation uses the same trained weights.
