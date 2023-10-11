@@ -143,7 +143,7 @@ def independent_choices(rows, coordinates, numbers, revealed, count, policy, see
         chosen = np.random.default_rng(seed).choice(np.asarray(available), count, replace=False)
         return [rows[int(index)] for index in chosen], [0.0] * count, [0.0] * count
     require(policy in {"diversity", "uncertainty-diversity"}, "unknown retained acquisition policy")
-    pairs: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    pairs: dict[tuple[int, ...], list[tuple[int, int]]] = {}
     for first in range(len(numbers)):
         for second in range(first + 1, len(numbers)):
             category = tuple(sorted((int(numbers[first]), int(numbers[second]))))
