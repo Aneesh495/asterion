@@ -14,5 +14,9 @@ class ResourceError(AsterionError):
     pass
 
 
+class CancellationError(ResourceError):
+    """An owned operation received an explicit operating-system cancellation."""
+
+
 class LabelAccessError(AsterionError):
     pass

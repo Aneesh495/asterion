@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 import uuid
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,7 @@ import torch
 
 from asterion.artifacts.io import file_hash, object_hash, read_json, write_json
 from asterion.artifacts.source import environment, project_root, source_inputs
-from asterion.contracts.errors import IntegrityError, ResourceError
+from asterion.contracts.errors import CancellationError, IntegrityError, ResourceError
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,8 @@ class Stage:
     argv: tuple[str, ...]
     outputs: tuple[str, ...]
     timeout_seconds: float = 72 * 3600
+    continuation: str = "fail"
+    reset_paths: tuple[str, ...] = ()
 
     def validate(self):
         if (
@@ -38,9 +41,38 @@ class Stage:
             raise IntegrityError("invalid campaign stage")
         if not re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", self.name):
             raise IntegrityError("invalid campaign stage name")
-        if any(Path(p).is_absolute() or ".." in Path(p).parts for p in self.outputs):
+        if any(
+            not p or Path(p).is_absolute() or ".." in Path(p).parts or p == "."
+            for p in (*self.outputs, *self.reset_paths)
+        ):
             raise IntegrityError("stage output must remain inside the run")
+        if self.continuation not in {"fail", "restart", "resume"}:
+            raise IntegrityError("unknown stage continuation policy")
+        if self.reset_paths and self.continuation != "restart":
+            raise IntegrityError("only restart stages may archive owned outputs")
+        if any(
+            Path(p).parts[0] in {"STAGES.json", ".coordinator.lock", "stage-logs", "stage-attempts"}
+            for p in self.reset_paths
+        ):
+            raise IntegrityError("stage cannot reset coordinator records")
         return self
+
+
+@contextmanager
+def cancellation_signals():
+    """Convert cancellation into unwinding so the owner can stop its process group."""
+    previous = {}
+
+    def cancel(number, frame):
+        raise CancellationError(f"campaign cancelled by signal {number}")
+
+    try:
+        for number in (signal.SIGINT, signal.SIGTERM):
+            previous[number] = signal.signal(number, cancel)
+        yield
+    finally:
+        for number, handler in previous.items():
+            signal.signal(number, handler)
 
 
 def output_inventory(root: Path, outputs):
@@ -132,16 +164,56 @@ class StageRunner:
         if child is None or child.poll() is not None:
             return
         # The process group was created for this stage. No unrelated process is targeted.
-        os.killpg(child.pid, signal.SIGTERM)
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            child.wait()
+            return
         try:
             child.wait(timeout=5)
         except subprocess.TimeoutExpired:
-            os.killpg(child.pid, signal.SIGKILL)
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
             child.wait(timeout=5)
+
+    def archive_partial(self, stage, attempt):
+        archive = self.run / "stage-attempts" / f"{stage.name}-{attempt:04}"
+        archive.mkdir(parents=True, exist_ok=True)
+        plan_path = archive / "ARCHIVE.json"
+        if plan_path.exists():
+            plan = read_json(plan_path)
+            if plan["definition"] != object_hash(asdict(stage)):
+                raise IntegrityError("partial-stage archive definition changed")
+        else:
+            existing = tuple(p for p in stage.reset_paths if (self.run / p).exists())
+            plan = {"definition": object_hash(asdict(stage)), "paths": list(existing)}
+            # This intent is durable before the first rename. Repeated recovery finishes it.
+            write_json(plan_path, plan)
+        for relative in plan["paths"]:
+            source = self.run / relative
+            destination = archive / "outputs" / relative
+            member = self.run
+            for part in Path(relative).parts:
+                member /= part
+                if member.is_symlink():
+                    raise IntegrityError("linked partial-stage observation")
+            if source.exists() and destination.exists():
+                raise IntegrityError("ambiguous partial-stage archive collision")
+            if source.exists():
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                source.rename(destination)
+            elif not destination.exists():
+                raise IntegrityError("partial-stage observation disappeared during recovery")
+        plan["completed"] = True
+        write_json(plan_path, plan)
 
     def execute(self, stage: Stage):
         stage.validate()
-        previous = next((r for r in self.state["stages"] if r["name"] == stage.name), None)
+        previous = next(
+            (r for r in reversed(self.state["stages"]) if r["name"] == stage.name), None
+        )
         definition = object_hash(asdict(stage))
         if previous and previous["status"] == "passed":
             if previous["definition"] != definition or previous["outputs"] != output_inventory(
@@ -150,19 +222,42 @@ class StageRunner:
                 raise IntegrityError("completed campaign stage inputs or outputs changed")
             return previous
         if previous:
-            raise IntegrityError("failed stage retained; use a new campaign identity after repair")
+            if stage.continuation == "fail":
+                raise IntegrityError(
+                    "failed stage retained; use a new campaign identity after repair"
+                )
+            if previous.get("definition") != definition:
+                raise IntegrityError("interrupted stage definition changed")
+            if previous["status"] not in {"running", "interrupted", "failed"}:
+                raise IntegrityError("invalid previous stage status")
+            if previous["status"] == "running" and previous.get("child_pid"):
+                try:
+                    os.kill(previous["child_pid"], 0)
+                except ProcessLookupError:
+                    pass
+                else:
+                    raise IntegrityError(
+                        "previous stage process remains alive; cannot duplicate work"
+                    )
+            if stage.continuation == "restart":
+                self.archive_partial(stage, previous.get("attempt", 1))
         logs = self.run / "stage-logs"
         logs.mkdir(exist_ok=True)
         record: dict[str, Any] = {
             "name": stage.name,
             "definition": definition,
+            "attempt": 1 if previous is None else previous.get("attempt", 1) + 1,
             "argv": list(stage.argv),
             "status": "running",
             "started_ns": time.time_ns(),
             "exit": None,
-            "stdout": str((logs / f"{stage.name}.stdout").relative_to(self.run)),
-            "stderr": str((logs / f"{stage.name}.stderr").relative_to(self.run)),
         }
+        for channel in ("stdout", "stderr"):
+            record[channel] = str(
+                (logs / f"{stage.name}-{record['attempt']:04}.{channel}").relative_to(self.run)
+            )
+        if previous is not None:
+            previous["continued_by_attempt"] = record["attempt"]
         self.state["stages"].append(record)
         write_json(self.state_path, self.state)
         print(f"campaign stage={stage.name}", flush=True)
@@ -180,6 +275,8 @@ class StageRunner:
                     start_new_session=True,
                     env={**os.environ, "OMP_NUM_THREADS": "4", "MKL_NUM_THREADS": "4"},
                 )
+                record["child_pid"] = self.child.pid
+                write_json(self.state_path, self.state)
                 while self.child.poll() is None:
                     if time.monotonic() - started > stage.timeout_seconds:
                         raise ResourceError(f"campaign stage timed out: {stage.name}")
@@ -194,10 +291,14 @@ class StageRunner:
             return record
         except BaseException as failure:
             self.terminate_child()
-            record["status"] = "failed"
+            record["status"] = (
+                "interrupted"
+                if isinstance(failure, (CancellationError, KeyboardInterrupt))
+                else "failed"
+            )
             record["error"] = f"{type(failure).__name__}: {failure}"
             record["exit"] = self.child.returncode if self.child else None
-            self.state["status"] = "failed"
+            self.state["status"] = record["status"]
             raise
         finally:
             record["ended_ns"] = time.time_ns()
@@ -257,18 +358,64 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
             (sys.executable, "-m", "pytest", f"--junitxml={run / 'tests.xml'}"),
             ("tests.xml",),
             3600,
+            "restart",
+            ("tests.xml",),
         ),
-        Stage("data", command("data"), (), 3600),
-        Stage("train", command("train"), ("training-units.json",)),
-        Stage("evaluate", command("evaluate"), ("evaluation-units.json",)),
-        Stage("simulate", command("simulate"), ("simulation-units.json",)),
-        Stage("acquire", command("acquire"), ("acquisition/acquisition-units.json",)),
-        Stage("ablate", command("ablate"), ("ablations/ablation-units.json",)),
-        Stage("reference", command("reference"), ("reference/reference-units.json",)),
-        Stage("secondary", command("secondary"), ("secondary/secondary.json",)),
-        Stage("properties", command("properties"), ("properties.json",), 3600),
-        Stage("derivatives", command("derivatives"), ("derivatives/derivatives.json",), 3600),
-        Stage("analytic", command("analytic"), ("analytic/analytic.json",), 3600),
+        Stage("data", command("data"), (), 3600, "resume"),
+        Stage("train", command("train"), ("training-units.json",), continuation="resume"),
+        Stage("evaluate", command("evaluate"), ("evaluation-units.json",), continuation="resume"),
+        Stage(
+            "simulate",
+            command("simulate"),
+            ("simulation-units.json",),
+            continuation="restart",
+            reset_paths=("simulation", "simulation-units.json"),
+        ),
+        Stage(
+            "acquire",
+            command("acquire"),
+            ("acquisition/acquisition-units.json",),
+            continuation="restart",
+            reset_paths=("acquisition",),
+        ),
+        Stage(
+            "ablate",
+            command("ablate"),
+            ("ablations/ablation-units.json",),
+            continuation="restart",
+            reset_paths=("ablations",),
+        ),
+        Stage(
+            "reference",
+            command("reference"),
+            ("reference/reference-units.json",),
+            continuation="restart",
+            reset_paths=("reference",),
+        ),
+        Stage(
+            "secondary",
+            command("secondary"),
+            ("secondary/secondary.json",),
+            continuation="restart",
+            reset_paths=("secondary",),
+        ),
+        Stage("properties", command("properties"), ("properties.json",), 3600, "resume"),
+        Stage(
+            "derivatives",
+            command("derivatives"),
+            ("derivatives/derivatives.json",),
+            3600,
+            "restart",
+            ("derivatives",),
+        ),
+        Stage(
+            "analytic",
+            command("analytic"),
+            ("analytic/analytic.json",),
+            3600,
+            "restart",
+            ("analytic",),
+        ),
         Stage(
             "stress",
             command("stress"),
@@ -279,9 +426,18 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
                 "training-recovery/recovery.json",
             ),
             7200,
+            "restart",
+            ("memory-stress.json", "faults", "simulation-recovery", "training-recovery"),
         ),
-        Stage("bench", command("bench"), ("benchmark.json",), 3600),
-        Stage("demo", command("demo"), ("viewer.html", "failure-viewer.html"), 3600),
+        Stage("bench", command("bench"), ("benchmark.json",), 3600, "resume"),
+        Stage(
+            "demo",
+            command("demo"),
+            ("viewer.html", "failure-viewer.html"),
+            3600,
+            "restart",
+            ("viewer.html", "failure-viewer.html", "demo-failure"),
+        ),
     ]
 
 
@@ -317,7 +473,7 @@ def execute_research(config, config_path, storage: Path, run: Path, evidence: Pa
             "storage": str(storage.resolve()),
         }
     )
-    with CampaignOwner(run, resume):
+    with CampaignOwner(run, resume), cancellation_signals():
         runner = StageRunner(run, identity, resume=resume)
         for stage in research_stages(config_path, storage, run, resume):
             if source_inputs()["digest"] != preflight["source"]["digest"]:

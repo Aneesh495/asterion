@@ -68,7 +68,15 @@ def atomic_npz(path: Path, **arrays):
 
 
 def safe_member(root: Path, relative: str) -> Path:
-    path = (root / relative).resolve()
-    if not path.is_relative_to(root.resolve()) or path.is_symlink():
+    member = Path(relative)
+    if member.is_absolute() or ".." in member.parts:
+        raise IntegrityError("artifact path escapes evidence root")
+    path = root
+    for part in member.parts:
+        path /= part
+        if path.is_symlink():
+            raise IntegrityError("linked artifact path")
+    path = path.resolve()
+    if not path.is_relative_to(root.resolve()):
         raise IntegrityError("artifact path escapes evidence root")
     return path

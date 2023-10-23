@@ -57,6 +57,9 @@ def save_checkpoint(path: Path, model, optimizer, metadata: dict):
         tensors: dict = {}
         optimizer_tree = pack_tree(optimizer.state_dict() if optimizer is not None else {}, tensors)
         tensors["rng.cpu"] = torch.random.get_rng_state().clone()
+        if next(model.parameters()).is_cuda:
+            for index, rng in enumerate(torch.cuda.get_rng_state_all()):
+                tensors[f"rng.cuda.{index}"] = rng.clone()
         save_file(tensors, str(temporary / "state.safetensors"))
         record = {
             **metadata,
@@ -72,6 +75,11 @@ def save_checkpoint(path: Path, model, optimizer, metadata: dict):
             with file.open("rb") as stream:
                 os.fsync(stream.fileno())
         os.replace(temporary, path)
+        parent = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(parent)
+        finally:
+            os.close(parent)
     finally:
         if temporary.exists():
             shutil.rmtree(temporary)
@@ -92,7 +100,8 @@ def load_checkpoint(path: Path, device="cpu", dtype=torch.float64):
             raise IntegrityError("checkpoint tensor hash mismatch")
     config = dict(record["architecture"])
     config["elements"] = tuple(config["elements"])
-    model = make_model(ModelConfig(**config)).to(device=device, dtype=dtype)
+    with torch.random.fork_rng(devices=[]):
+        model = make_model(ModelConfig(**config)).to(device=device, dtype=dtype)
     model.load_state_dict(
         load_file(str(path / "model.safetensors"), device=str(device)), strict=True
     )
@@ -103,3 +112,12 @@ def restore_optimizer(path: Path, optimizer, record):
     tensors = load_file(str(path / "state.safetensors"))
     optimizer.load_state_dict(unpack_tree(record["optimizer"], tensors))
     torch.random.set_rng_state(tensors["rng.cpu"])
+    cuda = sorted(
+        (int(key.rsplit(".", 1)[1]), value)
+        for key, value in tensors.items()
+        if key.startswith("rng.cuda.")
+    )
+    if cuda:
+        if not torch.cuda.is_available() or len(cuda) != torch.cuda.device_count():
+            raise IntegrityError("CUDA recovery device population changed")
+        torch.cuda.set_rng_state_all([value for _, value in cuda])

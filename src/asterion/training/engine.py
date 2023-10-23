@@ -1,3 +1,4 @@
+import math
 import time
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
@@ -41,7 +42,13 @@ class TrainConfig:
         ):
             raise ContractError("invalid training size")
         if (
-            min(self.energy_weight, self.force_weight) < 0
+            not all(
+                math.isfinite(x)
+                for x in (self.energy_weight, self.force_weight, self.learning_rate, self.clip_norm)
+            )
+            or self.learning_rate <= 0
+            or self.clip_norm <= 0
+            or min(self.energy_weight, self.force_weight) < 0
             or self.energy_weight + self.force_weight == 0
         ):
             raise ContractError("positive training loss weight required")
@@ -157,10 +164,12 @@ def train(
             record,
         )
         completed, updates = record["epoch"], record["updates"]
-        history = read_json(directory / "history.json")[:completed]
-        selection = read_json(directory / "selection.json")
-        best, selected_epoch = selection["score"], selection["epoch"]
-        selected_path = directory / selection["checkpoint"]
+        from asterion.training.recovery import reconcile_training
+
+        history, selection = reconcile_training(directory, resume, record)
+        if selection is not None:
+            best, selected_epoch = selection["score"], selection["epoch"]
+            selected_path = directory / selection["checkpoint"]
     else:
         split.write(directory / "split.json")
         local_reveal = directory / "reveal"
@@ -180,12 +189,19 @@ def train(
                 "epoch": 0,
                 "updates": 0,
                 "examples_processed": 0,
+                "training_history": [],
+                "training_selection": None,
             },
         )
         initial_arrays, initial_metrics = predict(model, validation, config.batch_size)
         atomic_npz(directory / "initial-validation.npz", **initial_arrays)
         write_json(directory / "initial-validation.json", initial_metrics)
-    initial_weights = {k: v.detach().clone() for k, v in model.named_parameters()}
+    if resume is not None:
+        original, _ = load_checkpoint(directory / "initial", device=config.device, dtype=dtype)
+        initial_weights = {k: v.detach().clone() for k, v in original.named_parameters()}
+        del original
+    else:
+        initial_weights = {k: v.detach().clone() for k, v in model.named_parameters()}
     for epoch in range(completed, config.epochs):
         model.train()
         factor = 0.1 + 0.9 * (1 + np.cos(np.pi * epoch / config.epochs)) / 2
@@ -251,6 +267,17 @@ def train(
             need_checkpoint = True
         if need_checkpoint:
             checkpoint = directory / f"epoch-{epoch + 1:05}"
+            if improved:
+                selected_path = checkpoint
+            if selected_path is None:
+                raise IntegrityError("checkpoint publication has no validation selection")
+            selection_record = {
+                "checkpoint": selected_path.name,
+                "epoch": selected_epoch,
+                "score": best,
+                "rule": "minimum-validation-force-mae",
+                "lineage": lineage_hash,
+            }
             metadata = {
                 "origin": "original-force-loss-training",
                 "lineage": lineage_hash,
@@ -259,6 +286,8 @@ def train(
                 "examples_processed": (epoch + 1) * len(labels),
                 "unique_training_geometries": len(labels),
                 "seed": config.seed,
+                "training_history": history,
+                "training_selection": selection_record,
                 "parameter_change_norm": float(
                     sum(
                         (p - initial_weights[k]).square().sum().item()
@@ -268,21 +297,12 @@ def train(
                 ),
             }
             save_checkpoint(checkpoint, model, optimizer, metadata)
+            if improved:
+                write_json(directory / "selection.json", selection_record)
+            # Publish the resume pointer after the self-contained generation and selection.
             write_json(
                 directory / "latest.json", {"checkpoint": checkpoint.name, "epoch": epoch + 1}
             )
-            if improved:
-                selected_path = checkpoint
-                write_json(
-                    directory / "selection.json",
-                    {
-                        "checkpoint": checkpoint.name,
-                        "epoch": epoch + 1,
-                        "score": score,
-                        "rule": "minimum-validation-force-mae",
-                        "lineage": lineage_hash,
-                    },
-                )
         if (epoch + 1) % 10 == 0 or epoch == 0:
             print(
                 f"epoch={epoch + 1} updates={updates} validation_force_mae={score:.6f}", flush=True

@@ -1,3 +1,4 @@
+import uuid
 from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
@@ -88,33 +89,33 @@ def train_campaign(config, storage: Path, directory: Path, resume=False):
                 for budget in config["budgets"]:
                     name = unit_name(molecule, kind, budget, seed)
                     run = directory / name
-                    if resume and (run / "completed.json").exists():
-                        result = read_json(run / "completed.json")
-                        # Completion is not permission to ignore changed inputs.
-                        frozen = read_json(run / "config.json")
-                        if (
-                            frozen["dataset"] != pool.dataset_hash
-                            or frozen["training"]["epochs"] != config["epochs"]
-                        ):
-                            raise ContractError(
-                                "completed run cannot be reused with changed data/workload"
-                            )
-                    else:
-                        checkpoint = None
-                        if resume and (run / "latest.json").exists():
-                            checkpoint = run / read_json(run / "latest.json")["checkpoint"]
-                        architecture = ModelConfig(kind=kind, **config["architecture"])
-                        training = TrainConfig(
-                            seed=seed,
-                            budget=budget,
-                            epochs=config["epochs"],
-                            batch_size=config["batch_size"],
-                            **config["training"],
+                    checkpoint = None
+                    if resume and (run / "latest.json").exists():
+                        from asterion.artifacts.io import safe_member
+
+                        checkpoint = safe_member(run, read_json(run / "latest.json")["checkpoint"])
+                    elif resume and (run / "initial/checkpoint.json").exists():
+                        checkpoint = run / "initial"
+                    elif resume and run.exists():
+                        # No immutable generation exists yet. Retain the partial initialization
+                        # instead of confusing directory presence with completed optimizer work.
+                        retained = (
+                            directory / "initialization-attempts" / f"{name}-{uuid.uuid4().hex}"
                         )
-                        print(f"training {name}", flush=True)
-                        result = train(
-                            oracle, split, run, architecture, training, resume=checkpoint
-                        )
+                        retained.parent.mkdir(parents=True, exist_ok=True)
+                        run.rename(retained)
+                    architecture = ModelConfig(kind=kind, **config["architecture"])
+                    training = TrainConfig(
+                        seed=seed,
+                        budget=budget,
+                        epochs=config["epochs"],
+                        batch_size=config["batch_size"],
+                        **config["training"],
+                    )
+                    print(f"training {name}", flush=True)
+                    # train validates complete source/data/config/reveal lineage even when the
+                    # resume generation already covers every epoch. A summary cannot bypass it.
+                    result = train(oracle, split, run, architecture, training, resume=checkpoint)
                     outcomes.append(
                         {
                             "molecule": molecule,
