@@ -112,6 +112,11 @@ def independent_metrics(arrays):
     e, f = arrays["energy"], arrays["force"]
     te, tf = arrays["target_energy"], arrays["target_force"]
     p = arrays["pointers"]
+    require(
+        e.ndim == 1 and f.ndim == 2 and f.shape[1] == 3 and arrays["positions"].shape == f.shape,
+        "physical prediction axes must be scalar energies and Cartesian vectors",
+    )
+    require(p.dtype.kind in "iu", "geometry pointers must be integer indices")
     require(e.shape == te.shape and f.shape == tf.shape, "prediction axes disagree")
     require(
         p.shape == (len(e) + 1,) and p[0] == 0 and p[-1] == len(f) and np.all(np.diff(p) > 0),
@@ -133,6 +138,11 @@ def independent_metrics(arrays):
         "geometry_force_mae": geometry_error,
         "geometries": len(e),
         "atoms": len(f),
+        "energy_rmse_eV": float(np.sqrt(sum(float(x) ** 2 for x in e - te) / len(e))),
+        "force_rmse_eV_angstrom": float(
+            np.sqrt(sum(float(x) ** 2 for x in (f - tf).flat) / f.size)
+        ),
+        "force_components": f.size,
     }
 
 
@@ -219,6 +229,9 @@ def verify_training(
     if train_config["force_weight"] > 0:
         require(history[0]["force_gradient_squared"] > 1e-20, "detached force-loss gradient")
     selection = read_json(directory / "selection.json")
+    require(
+        1 <= selection["epoch"] <= len(history), "selection epoch is outside completed training"
+    )
     minimum = min(item["validation_force_mae"] for item in history)
     require(
         abs(selection["score"] - minimum) < 1e-12, "checkpoint selection is not validation-optimal"
@@ -227,7 +240,15 @@ def verify_training(
         abs(history[selection["epoch"] - 1]["validation_force_mae"] - minimum) < 1e-12,
         "selection epoch does not match raw validation history",
     )
-    model, checkpoint = load_checkpoint(directory / selection["checkpoint"])
+    model, checkpoint = load_checkpoint(safe_member(directory, selection["checkpoint"]))
+    require(
+        object_hash(checkpoint["architecture"]) == object_hash(config["architecture"]),
+        "selected checkpoint architecture differs from training",
+    )
+    require(
+        checkpoint.get("training_history") == history[: selection["epoch"]],
+        "selected checkpoint lost its immutable training history",
+    )
     require(
         model.config.level == ("PBE/def2-SVP" if family == "rmd17" else "PBE+MBD"),
         "trained model electronic level differs from its dataset family",
@@ -268,6 +289,11 @@ def verify_training(
         rows == split["evaluation"] and len(rows) == len(set(rows)),
         "evaluation rows changed or repeated",
     )
+    require(
+        arrays["identities"].tolist()
+        == [f"{entry['molecule']}:{split['dataset_hash']}:{row}" for row in rows],
+        "prediction namespace differs from its molecule or dataset",
+    )
     if profile == "full":
         require(
             len(rows) >= (5000 if family == "rmd17" else 1000),
@@ -296,6 +322,27 @@ def verify_training(
         )
         original_indices = reference["old_indices"][rows] if family == "rmd17" else np.asarray(rows)
     conversion = 4184 / (6.02214076e23 * 1.602176634e-19)
+    require(
+        np.isclose(
+            normalization["energy_scale"],
+            max(float(np.std(train_energies * conversion)), 0.01),
+            atol=1e-10,
+            rtol=1e-9,
+        )
+        and np.isclose(
+            normalization["force_scale"],
+            max(float(np.sqrt(np.mean((train_forces * conversion) ** 2))), 0.01),
+            atol=1e-12,
+            rtol=1e-10,
+        )
+        and np.isclose(
+            model.config.energy_scale, normalization["energy_scale"], atol=1e-12, rtol=1e-10
+        )
+        and np.isclose(
+            model.config.energy_offset, normalization["energy_per_atom"], atol=1e-10, rtol=1e-10
+        ),
+        "model normalization differs from permitted training labels",
+    )
     require(
         model.config.composition is not None
         and tuple(model.config.composition) == expected_composition,
@@ -504,6 +551,16 @@ def verify(root: Path, expected_profile="full", candidate=False):
         verify_training(root, entry, source, datasets, expected_profile)
         for entry in units["training"]
     ]
+    from asterion.artifacts.shift import verify_temporal_slice
+
+    for entry, observation in zip(units["training"], observations, strict=True):
+        observation["temporal_slice"] = verify_temporal_slice(
+            safe_member(root, entry["path"]),
+            config,
+            source,
+            datasets[f"rmd17_{entry['molecule']}.npz"],
+            entry["molecule"],
+        )
     require(
         report["completed_training_runs"] == len(observations), "inflated completed training count"
     )

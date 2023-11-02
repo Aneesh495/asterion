@@ -18,8 +18,10 @@ vectors always use current differentiable positions. Supplying indices built on 
 does not detach energy from the current coordinate tensor. Empty neighborhoods remain supported.
 
 `load_checkpoint` reads JSON and safetensors, validates immutable tensor identities, reconstructs
-the original architecture and restores weights. Model precision follows the saved checkpoint;
-callers collate inputs to the actual parameter dtype and device. Dataset electronic levels cannot
+the original architecture and restores weights. Loading uses CPU float64 by default. Explicit
+`dtype` and `device` arguments select another supported execution precision; converting saved
+float32 weights to float64 does not restore information lost during training. Callers collate
+inputs to the actual parameter dtype and device. Dataset electronic levels cannot
 be inferred from atomic numbers and must be checked by the application at the data boundary.
 
 `LearnedEvaluator` owns a model and neighbor cache, returns `ForceResult`, and converts forces to

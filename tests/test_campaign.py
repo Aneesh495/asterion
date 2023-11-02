@@ -195,6 +195,7 @@ def test_full_stage_plan_preserves_all_required_families(tmp_path):
         "data",
         "train",
         "evaluate",
+        "guarded-shift",
         "simulate",
         "acquire",
         "ablate",

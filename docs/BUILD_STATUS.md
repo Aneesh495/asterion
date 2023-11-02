@@ -2,7 +2,7 @@
 
 Phase: interruption recovery and independent study validation. Full delivery remains incomplete.
 
-The current source passes 295 collected tests, 161 authored test functions, Ruff and mypy.
+The current source passes 312 collected tests, 178 authored test functions, Ruff and mypy.
 `runs/recovery-validation-06/tests.xml` records the local invocation. The 400-authored-test gate
 and private implementation-depth gate remain unmet. No workload requirement was lowered.
 
@@ -62,8 +62,9 @@ environment is absent. No full 72-run primary campaign, 12 MACE retrainings, mil
 full acquisition/ablation population or MD22 long-horizon study has run. Full positive assembly,
 clean installations and package release have not been exercised against current source.
 
-Guarded-shift prediction validation, raw ablation verification, complete gate/source/command
-coverage, reference compatibility and resource pilot, acquisition viewer paths, uncertainty
+Guarded comparison and temporal-slice raw validation, saved-checkpoint history/normalizer checks
+and raw ablation verification are now implemented. Their new end-to-end runs remain to execute.
+Complete gate/source/command coverage, reference compatibility and resource pilot, acquisition viewer paths, uncertainty
 validity checks and substantive numerical tests remain to finish. A temporal slice of an
 arbitrarily sampled training pool does not establish a temporally guarded training comparison.
 

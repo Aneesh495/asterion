@@ -140,25 +140,7 @@ def evaluate_campaign(config, storage: Path, directory: Path):
         result = evaluate_run(oracle, split, run, config["batch_size"])
         audit = audit_leakage(pool, split)
         write_json(run / "leakage.json", audit)
-        from asterion.evaluation.metrics import paired_block_interval
-
-        blocks = pool.original_indices[list(split.evaluation)] // 1000
-        comparisons = {}
-        for baseline in ("zero_force", "untrained"):
-            comparisons[baseline] = paired_block_interval(
-                result[baseline]["geometry_force_mae"],
-                result["trained"]["geometry_force_mae"],
-                blocks,
-            )
-        write_json(
-            run / "learning-paired.json",
-            {
-                "temporal_block_span_original_indices": 1000,
-                "geometry_count": len(split.evaluation),
-                "comparisons": comparisons,
-                "assumption": "temporal blocks are a declared correlation heuristic, not a proof of independence",
-            },
-        )
+        write_learning_intervals(pool, split, run, result)
         # Shift evaluation excludes every role used for fitting, selection and calibration.
         forbidden = (
             set(split.train_pool)
@@ -178,7 +160,12 @@ def evaluate_campaign(config, storage: Path, directory: Path):
         ]
         if len(shifted) != config["evaluation_size"]:
             raise ContractError("guarded shift cannot meet the frozen distinct evaluation count")
-        stress = replace(split, protocol="temporal-held-out-shift", evaluation=shifted)
+        stress = replace(
+            split,
+            protocol="temporal-slice-excluding-primary-roles",
+            evaluation=shifted,
+            temporal_guard=0,
+        )
         stress.write(run / "shift-split.json")
         # Preserve the primary artifact while a separately named evaluation uses the same trained weights.
         from asterion.artifacts.io import atomic_npz
@@ -193,6 +180,27 @@ def evaluate_campaign(config, storage: Path, directory: Path):
         outcomes.append({**entry, "evaluation": result, "shift": metrics})
         write_json(directory / "evaluation-units.json", outcomes)
     return outcomes
+
+
+def write_learning_intervals(pool, split, run, result):
+    from asterion.evaluation.metrics import paired_block_interval
+
+    blocks = pool.original_indices[list(split.evaluation)] // 1000
+    comparisons = {
+        baseline: paired_block_interval(
+            result[baseline]["geometry_force_mae"], result["trained"]["geometry_force_mae"], blocks
+        )
+        for baseline in ("zero_force", "untrained")
+    }
+    write_json(
+        run / "learning-paired.json",
+        {
+            "temporal_block_span_original_indices": 1000,
+            "geometry_count": len(split.evaluation),
+            "comparisons": comparisons,
+            "assumption": "temporal blocks are a declared correlation heuristic, not a proof of independence",
+        },
+    )
 
 
 def ablation_campaign(config, storage: Path, directory: Path):
@@ -236,6 +244,9 @@ def ablation_campaign(config, storage: Path, directory: Path):
                 outcomes.append(
                     {
                         "variant": name,
+                        "path": run.name,
+                        "model": "equivariant",
+                        "budget": training.budget,
                         "molecule": molecule,
                         "seed": seed,
                         "result": result,

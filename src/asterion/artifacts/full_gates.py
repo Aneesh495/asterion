@@ -35,6 +35,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         "reference",
         "secondary",
         "controls",
+        "guarded_shift",
     }
     require(required <= index.keys(), "full gate observation families are missing")
     counts = {}
@@ -231,16 +232,17 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         and all(x["completed_labels"] == x["budget"] for x in acquisitions),
         "acquisition policies, seeds, molecules or budgets are missing",
     )
-    ablations = read_json(safe_member(root, index["ablations"]))
+    from asterion.artifacts.ablations import verify_ablations
+    from asterion.artifacts.shift import verify_guarded_study
+
     require(
-        {x["variant"] for x in ablations}
-        >= {"lmax0", "lmax1", "no-higher-order", "hard-cutoff", "energy-only"}
-        and len({x["molecule"] for x in ablations}) >= 2
-        and all(
-            len({x["seed"] for x in ablations if x["variant"] == variant}) >= 3
-            for variant in {x["variant"] for x in ablations}
-        ),
-        "required ablation population incomplete",
+        len(config["molecules"][:2]) == 2, "architectural ablations require a two-molecule core"
+    )
+    verify_ablations(
+        root, index["ablations"], config, read_json(root / "SOURCE_INPUTS.json"), dataset_paths
+    )
+    verify_guarded_study(
+        root, index["guarded_shift"], config, read_json(root / "SOURCE_INPUTS.json"), dataset_paths
     )
     reference = read_json(safe_member(root, index["reference"]))
     require(

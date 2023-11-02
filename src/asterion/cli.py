@@ -53,6 +53,7 @@ COMMANDS = (
     "analytic",
     "secondary",
     "reference",
+    "guarded-shift",
 )
 
 
@@ -253,6 +254,12 @@ def dispatch(args):
 
         return journal.execute(
             "ablate", lambda: ablation_campaign(config, storage, runs / "ablations")
+        )
+    if args.command == "guarded-shift":
+        from asterion.training.shift import guarded_campaign
+
+        return journal.execute(
+            "guarded-shift", lambda: guarded_campaign(config, storage, runs / "guarded-shift")
         )
     if args.command == "secondary":
         from asterion.training.secondary import secondary_campaign

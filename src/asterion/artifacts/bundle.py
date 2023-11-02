@@ -99,6 +99,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "acquisitions": "acquisition",
         "reference": "reference",
         "secondary": "secondary",
+        "guarded_shift": "guarded-shift",
     }
     endpoints = {
         "derivatives": "derivatives.json",
@@ -110,6 +111,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "acquisitions": "acquisition-units.json",
         "reference": "reference-units.json",
         "secondary": "secondary.json",
+        "guarded_shift": "guarded-units.json",
     }
     index = {"junit": "gates/tests.xml", "controls": "gates/full-controls.json"}
     destination = evidence / "gates"

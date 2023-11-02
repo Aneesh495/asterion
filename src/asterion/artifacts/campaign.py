@@ -365,6 +365,13 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
         Stage("train", command("train"), ("training-units.json",), continuation="resume"),
         Stage("evaluate", command("evaluate"), ("evaluation-units.json",), continuation="resume"),
         Stage(
+            "guarded-shift",
+            command("guarded-shift"),
+            ("guarded-shift",),
+            continuation="restart",
+            reset_paths=("guarded-shift",),
+        ),
+        Stage(
             "simulate",
             command("simulate"),
             ("simulation-units.json",),

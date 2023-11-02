@@ -11,6 +11,13 @@ are identical within each comparison. Models start from random initialization. C
 selected by minimum validation force MAE. Final evaluation has at least 5000 geometries per molecule.
 Reference MACE retraining uses the 1000-label budget in a separate environment.
 
+The guarded comparison is a separate original training task at 1000 labels. For each primary
+molecule, both architectures and all three seeds train on the first 45 percent of original-time
+ordering. Validation, calibration and evaluation occupy the next 15, next 15 and final 25 percent.
+Each block excludes an additional 100 original-index units at each boundary. Evaluation retains
+5000 geometries. These 24 models are additional to the 72 author-split primary models. Checkpoints,
+normalizers, labels and selection remain separate. `make guarded-shift` executes this path.
+
 The diagnostic profile uses ethanol with the same three seeds, 100 labels, 100 epochs and 256
 held-out geometries per seed. It answers whether the integrated code learns and runs. It does not
 answer the full cross-molecule sample-efficiency hypothesis. Pilot test inspection is retrospective.
@@ -40,5 +47,7 @@ Paired learning uncertainty uses original temporal index blocks of span 1000, wi
 block-bootstrap repetitions and seed 491. The point estimate remains geometry weighted;
 resampled block totals divide by resampled geometry counts. Positive lower bounds are required
 against zero force and the untrained model for the full learning gate. Blocks are a correlation
-heuristic and do not establish independent molecular conformations. Shift selection oversamples
-permitted temporal candidates, excludes every primary role, and retains the exact declared count.
+heuristic and do not establish independent molecular conformations. The primary model's temporal
+slice separately oversamples permitted candidates, excludes every primary role and retains the
+exact declared count. That slice has no guard relative to its randomly sampled training labels;
+it cannot substitute for the separately trained guarded comparison.
