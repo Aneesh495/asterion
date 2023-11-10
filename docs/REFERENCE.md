@@ -9,13 +9,22 @@ Create the comparison environment explicitly:
 
 ```sh
 uv venv --python 3.12 .reference-venv
-uv pip install --python .reference-venv/bin/python 'mace-torch==0.3.14' 'torch==2.8.0'
+uv pip sync --python .reference-venv/bin/python --require-hashes requirements/reference-linux.txt
 make reference CONFIG=configs/full.json RUN_ID=full-research
 ```
 
-This command requires CUDA and uses 1000 training structures per molecule and seed. The separate
-environment is not yet lock-verified or executed. Its compatibility, checkpoints and prediction
-reproduction must be established before MA05 or a comparison result can pass. No pretrained
+This command requires Linux CUDA and uses 1000 training structures per molecule and seed.
+For the macOS CPU compatibility environment, use `requirements/reference-darwin.txt` instead.
+The probe checks all resolved distribution versions, Python, CUDA and reference CLI source bytes.
+The macOS lock was installed and checked. A separate CPU run trained MACE's declared 24-channel,
+two-interaction, correlation-three model for two epochs on 16 ethanol geometries, exported it
+and evaluated eight geometries. The two actual commands exited zero; the raw training journal
+contains eight optimizer updates and 32 processed examples. Its held-out force MAE was
+0.805081 eV/angstrom. This checks compatibility and is not the full matched comparison.
+The first attempt failed because its export directory was absent; that attempt is retained.
+The adapter now creates its output directories. The Linux CUDA environment and complete
+400-epoch retrainings remain unexecuted. Their compatibility, checkpoints and prediction
+reproduction must be established before MA05 can pass. No pretrained
 scores from the MACE publication are used as observed Asterion results.
 
 Labels use REF_energy and REF_forces to avoid ASE reserved-key relocation. After training,
@@ -24,6 +33,13 @@ has PRED fields and original identities. A bounded original parser saves NPZ arr
 full checker compares targets to author files and independently recomputes errors. Reference
 selection uses the standard final export, distinct from Asterion validation-force selection.
 Equal parameter counts or identical reference selection criteria are not claimed.
+
+Raw MACE result journals retain every optimizer batch and each validation epoch. The checker
+requires 400 epochs, 125 actual batches per epoch and 1000 unique author training rows. Exported
+training, validation and evaluation XYZ labels are checked against the pinned author arrays.
+Each input role retains its geometry identities and physical units. Rounded ASE evaluation
+exports use a separately declared 1e-8 comparison tolerance; authored input XYZ remains full
+precision. A metadata version string alone cannot certify executed training.
 
 MACE serializes its export as a full Torch module. Only the separate reference process loads its
 own newly trained export. Asterion verification never loads that executable format; original

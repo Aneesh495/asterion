@@ -55,7 +55,7 @@ def source_inputs(root: Path | None = None):
     root = root or project_root()
     assert_runtime_source(root)
     paths: list[Path] = []
-    for directory in ("src", "tests", "configs", "scripts"):
+    for directory in ("src", "tests", "configs", "scripts", "requirements"):
         paths.extend(
             path
             for path in (root / directory).rglob("*")

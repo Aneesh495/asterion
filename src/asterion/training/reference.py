@@ -1,16 +1,18 @@
-import os
 import subprocess
 from pathlib import Path
 
 import numpy as np
 
 from asterion.artifacts.io import atomic_npz, file_hash, write_json
+from asterion.artifacts.reference import reference_history
+from asterion.artifacts.source import project_root
 from asterion.contracts.errors import ResourceError
 from asterion.contracts.units import SYMBOLS
 from asterion.data.dataset import load_rmd17
 from asterion.data.extxyz import reference_arrays
 from asterion.data.splits import author_split
 from asterion.evaluation.metrics import prediction_metrics
+from asterion.training.reference_env import probe_reference, reference_process_environment
 
 
 def write_xyz(path, labels):
@@ -31,22 +33,13 @@ def write_xyz(path, labels):
 
 def reference_campaign(config, storage: Path, directory: Path):
     definition = config["reference"]
-    executable = Path(definition.get("python", ".reference-venv/bin/python")).resolve()
+    executable = Path(definition.get("python", ".reference-venv/bin/python")).absolute()
     if not executable.is_file():
         raise ResourceError(
             "reference requires a separate pinned MACE environment; see docs/REFERENCE.md"
         )
-    probe = subprocess.run(
-        [
-            str(executable),
-            "-c",
-            "import importlib.metadata; print(importlib.metadata.version('mace-torch'))",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    if probe.stdout.strip() != definition["version"]:
+    probe = probe_reference(executable, require_cuda=True)
+    if probe["versions"]["mace-torch"] != definition["version"]:
         raise ResourceError("MACE reference version differs from frozen comparison definition")
     outcomes = []
     for molecule in config["molecules"]:
@@ -64,6 +57,9 @@ def reference_campaign(config, storage: Path, directory: Path):
             if run.exists():
                 raise ResourceError("reference comparison run already exists")
             run.mkdir(parents=True)
+            for name in ("models", "checkpoints", "logs", "results"):
+                (run / name).mkdir()
+            write_json(run / "ENVIRONMENT.json", probe)
             split.write(run / "split.json")
             rows = np.random.default_rng(seed).permutation(split.train_pool)[:1000]
             for role, selected in (
@@ -93,14 +89,23 @@ def reference_campaign(config, storage: Path, directory: Path):
                 "--batch_size=8",
                 "--valid_batch_size=8",
                 "--max_num_epochs=400",
+                "--patience=401",
+                "--eval_interval=1",
                 "--device=cuda",
                 "--default_dtype=float32",
                 f"--model_dir={run / 'models'}",
                 f"--checkpoints_dir={run / 'checkpoints'}",
                 f"--log_dir={run / 'logs'}",
+                f"--results_dir={run / 'results'}",
             ]
             with (run / "stdout.txt").open("w") as stdout, (run / "stderr.txt").open("w") as stderr:
-                completed = subprocess.run(args, stdout=stdout, stderr=stderr, timeout=72 * 3600)
+                completed = subprocess.run(
+                    args,
+                    stdout=stdout,
+                    stderr=stderr,
+                    timeout=72 * 3600,
+                    env=reference_process_environment(project_root()),
+                )
             outcome = {
                 "molecule": molecule,
                 "seed": seed,
@@ -120,6 +125,8 @@ def reference_campaign(config, storage: Path, directory: Path):
             write_json(directory / "reference-units.json", outcomes)
             if completed.returncode:
                 raise ResourceError(f"MACE reference training failed: {molecule}/{seed}")
+            history_path = run / "results" / f"{molecule}-{seed}_run-{seed}_train.txt"
+            history = reference_history(history_path, 400, 1000, 8)
             exported_model = run / "models" / f"{molecule}-{seed}.model"
             if not exported_model.is_file() or exported_model.is_symlink():
                 raise ResourceError("MACE standard final export is absent")
@@ -146,7 +153,7 @@ def reference_campaign(config, storage: Path, directory: Path):
                     stdout=stdout,
                     stderr=stderr,
                     timeout=12 * 3600,
-                    env={**os.environ, "TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD": "1"},
+                    env=reference_process_environment(project_root()),
                 )
             if evaluation_process.returncode:
                 raise ResourceError("MACE retained-output evaluation failed")
@@ -175,6 +182,9 @@ def reference_campaign(config, storage: Path, directory: Path):
                 predictions_sha256=file_hash(run / "evaluation-predictions.npz"),
                 selection="standard-final-export",
                 metrics=metrics,
+                history=history,
+                history_path=str(history_path.relative_to(run)),
+                history_sha256=file_hash(history_path),
             )
             write_json(directory / "reference-units.json", outcomes)
     return outcomes

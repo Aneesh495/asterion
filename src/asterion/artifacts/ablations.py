@@ -1,3 +1,5 @@
+import numpy as np
+
 from asterion.artifacts.io import read_json, safe_member
 from asterion.contracts.errors import IntegrityError
 
@@ -55,7 +57,12 @@ def verify_ablations(root, report_path, config, source, datasets):
         label_sets[key] = labels
         if unit["budget"] != max(config["budgets"]) or unit["model"] != "equivariant":
             raise IntegrityError("ablation altered the label budget or conservative model family")
-        if measured["force_mae"] != unit["metrics"]["trained"]["force_mae_eV_angstrom"]:
+        if not np.isclose(
+            measured["force_mae"],
+            unit["metrics"]["trained"]["force_mae_eV_angstrom"],
+            atol=1e-12,
+            rtol=1e-10,
+        ):
             raise IntegrityError("ablation summary metric changed")
         results.append(measured)
     return results

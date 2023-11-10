@@ -2,9 +2,16 @@
 
 Phase: interruption recovery and independent study validation. Full delivery remains incomplete.
 
-The current source passes 312 collected tests, 178 authored test functions, Ruff and mypy.
+The current source passes 347 collected tests, 213 authored test functions, Ruff and mypy.
 `runs/recovery-validation-06/tests.xml` records the local invocation. The 400-authored-test gate
 and private implementation-depth gate remain unmet. No workload requirement was lowered.
+
+The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
+CPU compatibility run completed training, export and eight-geometry evaluation with the declared
+reference architecture. Both commands exited zero; the raw journal independently shows eight
+optimizer updates and 32 processed examples. The first export attempt failed because its model
+directory was absent and is retained. Directory creation and virtual-interpreter symlink handling
+are fixed. The Linux CUDA lock is resolved; its runtime and full retrainings remain unverified.
 
 ## Current mechanisms
 
@@ -19,7 +26,9 @@ between checkpoint, selection and latest publication, and during recovery archiv
 Model interactions use irrep/graph-tagged tensor features. Models retain electronic level and
 composition. Inference validates active connected components and message allocation budgets.
 The MACE adapter exports labels, calls pinned training/evaluation, parses bounded XYZ and retains
-physical predictions. Its separate environment and full reference retraining remain unexecuted.
+physical predictions. Verification counts actual reference batches and epochs and checks every
+exported input role against source labels. Dataset verification now also checks the pinned author
+release, file IDs, sizes, MD5s, electronic level and license. Full reference retraining is unexecuted.
 
 Independent study checking replays saved original weights, checks author labels, reconstructs
 committee mean/disagreement/calibration and greedy acquisition choices, and replays secondary
@@ -57,13 +66,13 @@ Older diagnostics, negative results and raw records remain retained in ignored l
 
 ## Outstanding gates
 
-Full execution is blocked on this Apple M2 host: CUDA is unavailable and the separate reference
-environment is absent. No full 72-run primary campaign, 12 MACE retrainings, million-step dynamics,
+Full execution is blocked on this Apple M2 host: CUDA is unavailable and the reference CUDA runtime is unavailable. No full 72-run primary campaign, 12 MACE retrainings, million-step dynamics,
 full acquisition/ablation population or MD22 long-horizon study has run. Full positive assembly,
 clean installations and package release have not been exercised against current source.
 
 Guarded comparison and temporal-slice raw validation, saved-checkpoint history/normalizer checks
-and raw ablation verification are now implemented. Their new end-to-end runs remain to execute.
+and raw ablation verification are implemented. The guarded CPU integration verified two saved models;
+five original ablation fixtures replay saved weights and reject altered summaries.
 Complete gate/source/command coverage, reference compatibility and resource pilot, acquisition viewer paths, uncertainty
 validity checks and substantive numerical tests remain to finish. A temporal slice of an
 arbitrarily sampled training pool does not establish a temporally guarded training comparison.

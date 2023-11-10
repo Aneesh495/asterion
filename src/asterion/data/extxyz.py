@@ -9,7 +9,7 @@ from asterion.contracts.errors import ContractError, ResourceError
 from asterion.contracts.units import SYMBOLS
 
 
-def parse_properties(description: str):
+def parse_properties(description: str, predictions=True):
     parts = description.split(":")
     if len(parts) % 3:
         raise ContractError("malformed XYZ property declaration")
@@ -29,7 +29,10 @@ def parse_properties(description: str):
         result[name] = (offset, offset + columns)
         types[name] = kind
         offset += columns
-    for name, size in (("species", 1), ("pos", 3), ("REF_forces", 3), ("PRED_forces", 3)):
+    required = [("species", 1), ("pos", 3), ("REF_forces", 3)]
+    if predictions:
+        required.append(("PRED_forces", 3))
+    for name, size in required:
         if name not in result or result[name][1] - result[name][0] != size:
             raise ContractError(f"required XYZ property is absent or malformed: {name}")
         if types[name] != ("S" if name == "species" else "R"):
@@ -37,13 +40,13 @@ def parse_properties(description: str):
     return result, offset
 
 
-def reference_arrays(path: Path, maximum_frames=10000, maximum_atoms=512):
+def reference_arrays(path: Path, maximum_frames=10000, maximum_atoms=512, predictions=True):
     if path.stat().st_size > 256 * 1024**2:
         raise ResourceError("XYZ file budget exceeded")
     reverse_symbols = {name: z for z, name in SYMBOLS.items()}
     geometries = []
     energies: list[float] = []
-    targets = []
+    targets: list[float] = []
     identities = []
     predicted_forces = []
     target_forces = []
@@ -58,7 +61,7 @@ def reference_arrays(path: Path, maximum_frames=10000, maximum_atoms=512):
                 atoms = int(line)
             except ValueError as failure:
                 raise ContractError("invalid XYZ atom count") from failure
-            if not 1 <= atoms <= maximum_atoms or len(energies) >= maximum_frames:
+            if not 1 <= atoms <= maximum_atoms or len(targets) >= maximum_frames:
                 raise ResourceError("XYZ atom/frame budget exceeded")
             header = stream.readline(65537)
             if len(header) > 65536:
@@ -70,8 +73,9 @@ def reference_arrays(path: Path, maximum_frames=10000, maximum_atoms=512):
                     raise ContractError("duplicate XYZ header keys")
                 if fields.get("pbc", "F F F").split() != ["F", "F", "F"]:
                     raise ContractError("periodic reference geometries are unsupported")
-                properties, columns = parse_properties(fields["Properties"])
-                energies.append(float(fields["PRED_energy"]))
+                properties, columns = parse_properties(fields["Properties"], predictions)
+                if predictions:
+                    energies.append(float(fields["PRED_energy"]))
                 targets.append(float(fields["REF_energy"]))
                 identities.append(fields["asterion_id"])
             except (KeyError, ValueError) as failure:
@@ -90,11 +94,10 @@ def reference_arrays(path: Path, maximum_frames=10000, maximum_atoms=512):
                 try:
                     first, _ = properties["species"]
                     atomic_numbers.append(reverse_symbols[values[first]])
-                    for name, destination in (
-                        ("pos", coordinates),
-                        ("PRED_forces", predicted),
-                        ("REF_forces", reference),
-                    ):
+                    vectors = [("pos", coordinates), ("REF_forces", reference)]
+                    if predictions:
+                        vectors.append(("PRED_forces", predicted))
+                    for name, destination in vectors:
                         begin, end = properties[name]
                         destination.append([float(v) for v in values[begin:end]])
                 except (KeyError, ValueError) as failure:
@@ -104,18 +107,21 @@ def reference_arrays(path: Path, maximum_frames=10000, maximum_atoms=512):
             target_forces.extend(reference)
             numbers.extend(atomic_numbers)
             pointers.append(pointers[-1] + atoms)
-    if not energies or len(set(identities)) != len(identities):
+    if not targets or len(set(identities)) != len(identities):
         raise ContractError("XYZ evaluation is empty or repeats geometry identities")
     arrays = {
-        "energy": np.asarray(energies, dtype=float),
         "target_energy": np.asarray(targets, dtype=float),
-        "force": np.asarray(predicted_forces, dtype=float),
         "target_force": np.asarray(target_forces, dtype=float),
         "positions": np.asarray(geometries, dtype=float),
         "numbers": np.asarray(numbers, dtype=np.int64),
         "pointers": np.asarray(pointers, dtype=np.int64),
         "identities": np.asarray(identities),
     }
+    if predictions:
+        arrays.update(
+            energy=np.asarray(energies, dtype=float),
+            force=np.asarray(predicted_forces, dtype=float),
+        )
     if any(not np.isfinite(value).all() for key, value in arrays.items() if key != "identities"):
         raise ContractError("nonfinite XYZ reference output")
     return arrays

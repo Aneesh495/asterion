@@ -91,7 +91,12 @@ def verify_secondary(root: Path, report_path: str, config, source):
         "secondary useful progress or failure denominator changed",
     )
     require(
-        observed["force_mae"] == report["metrics"]["trained"]["force_mae_eV_angstrom"],
+        np.isclose(
+            observed["force_mae"],
+            report["metrics"]["trained"]["force_mae_eV_angstrom"],
+            atol=1e-12,
+            rtol=1e-10,
+        ),
         "secondary summary force metric changed",
     )
     return {"model": observed, "completed_steps": steps, "failed_starts": failed}

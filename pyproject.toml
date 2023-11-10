@@ -22,7 +22,7 @@ asterion = "asterion.cli:main"
 packages = ["src/asterion"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/", "tests/", "configs/", "docs/", ".github/", "Makefile", "README.md", "LICENSE", "pyproject.toml", "uv.lock", ".python-version"]
+include = ["src/", "tests/", "configs/", "requirements/", "docs/", ".github/", "Makefile", "README.md", "LICENSE", "pyproject.toml", "uv.lock", ".python-version"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

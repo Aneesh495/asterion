@@ -59,6 +59,31 @@ def read_json(path: Path):
     )
 
 
+def read_json_lines(path: Path, maximum_rows=100000, maximum_bytes=256 * 1024**2):
+    if path.stat().st_size > maximum_bytes:
+        raise IntegrityError("line journal exceeds file budget")
+    values: list[dict] = []
+    with path.open() as stream:
+        while line := stream.readline(16385):
+            if len(line) > 16384 or len(values) >= maximum_rows:
+                raise IntegrityError("line journal exceeds row budget")
+            try:
+                value = json.loads(
+                    line,
+                    parse_constant=lambda x: (_ for _ in ()).throw(
+                        IntegrityError(f"nonfinite journal constant {x}")
+                    ),
+                )
+            except ValueError as failure:
+                raise IntegrityError("malformed line journal") from failure
+            if not isinstance(value, dict):
+                raise IntegrityError("line journal requires object records")
+            values.append(value)
+    if not values:
+        raise IntegrityError("empty line journal")
+    return values
+
+
 def atomic_npz(path: Path, **arrays):
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryFile() as stream:

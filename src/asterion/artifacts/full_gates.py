@@ -267,6 +267,26 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     conversion = 4184 / (6.02214076e23 * 1.602176634e-19)
     for row in reference:
         directory = safe_member(root, str((reference_base / row["path"]).relative_to(root)))
+        from asterion.artifacts.reference import reference_history
+        from asterion.training.reference_env import locked_versions
+
+        history_path = safe_member(directory, row["history_path"])
+        require(
+            file_hash(history_path) == row["history_sha256"], "reference training journal changed"
+        )
+        require(
+            reference_history(history_path, 400, 1000, 8) == row["history"],
+            "reference optimizer work counter changed",
+        )
+        comparison = read_json(directory / "ENVIRONMENT.json")
+        lock = safe_member(project_root(), comparison["lock"])
+        require(
+            comparison["cuda_available"]
+            and comparison["python"][:2] == [3, 12]
+            and file_hash(lock) == comparison["lock_sha256"]
+            and locked_versions(lock) == comparison["versions"],
+            "reference environment differs from the frozen comparison stack",
+        )
         require(
             row.get("budget") == 1000 and row.get("evaluation_exit") == 0,
             "reference labels or actual prediction execution missing",
@@ -329,6 +349,40 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         record = datasets[f"rmd17_{row['molecule']}.npz"]
         require(record["sha256"] == row["dataset"], "reference dataset lineage changed")
         with np.load(record["path"], allow_pickle=False) as author:
+            from asterion.data.extxyz import reference_arrays
+
+            for role, selected in (
+                ("train", row["training_rows"]),
+                ("validation", split["validation"]),
+                ("evaluation", split["evaluation"]),
+            ):
+                raw_input = reference_arrays(directory / f"{role}.xyz", predictions=False)
+                require(
+                    raw_input["identities"].tolist()
+                    == [f"{row['molecule']}:{row['dataset']}:{index}" for index in selected],
+                    "reference exported role identities changed",
+                )
+                require(
+                    np.allclose(
+                        raw_input["target_force"],
+                        author["forces"][selected].reshape(-1, 3) * conversion,
+                        atol=1e-12,
+                        rtol=0,
+                    )
+                    and np.allclose(
+                        raw_input["target_energy"],
+                        author["energies"][selected] * conversion,
+                        atol=1e-10,
+                        rtol=0,
+                    )
+                    and np.array_equal(
+                        raw_input["positions"], author["coords"][selected].reshape(-1, 3)
+                    )
+                    and np.array_equal(
+                        raw_input["numbers"], np.tile(author["nuclear_charges"], len(selected))
+                    ),
+                    "reference was trained or selected using different physical input labels",
+                )
             require(
                 np.allclose(
                     target, author["forces"][rows].reshape(-1, 3) * conversion, atol=1e-8, rtol=0

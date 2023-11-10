@@ -325,13 +325,22 @@ def full_preflight(config):
         reasons.append("full profile requires a CUDA accelerator")
     elif torch.cuda.get_device_properties(0).total_memory < 16 * 1024**3:
         reasons.append("full profile requires at least 16 GiB accelerator memory")
-    reference = Path(config["reference"].get("python", ".reference-venv/bin/python")).resolve()
+    reference = Path(config["reference"].get("python", ".reference-venv/bin/python")).absolute()
+    comparison = None
     if not reference.is_file():
         reasons.append("separate pinned reference environment is absent")
+    else:
+        from asterion.training.reference_env import probe_reference
+
+        try:
+            comparison = probe_reference(reference, require_cuda=True)
+        except ResourceError as failure:
+            reasons.append(str(failure))
     return {
         "source": source,
         "environment": environment(),
         "authored_tests": authored,
+        "reference": comparison,
         "status": "blocked" if reasons else "ready",
         "reasons": reasons,
     }

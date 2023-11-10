@@ -110,3 +110,37 @@ def test_reference_parser_rejects_excess_frame_count(tmp_path):
 def test_reference_parser_rejects_oversized_header(tmp_path):
     with pytest.raises(ResourceError, match="header budget"):
         arrays(tmp_path, "1\n" + ("a" * 65537) + "\n")
+
+
+INPUT_FRAME = (
+    "1\nProperties=species:S:1:pos:R:3:REF_forces:R:3 "
+    'REF_energy=-1.5 asterion_id="fixture:1" pbc="F F F"\n'
+    "C 0.1 0.2 0.3 1 2 3\n"
+)
+
+
+def test_reference_input_parser_keeps_targets_without_inventing_predictions(tmp_path):
+    result = arrays(tmp_path, INPUT_FRAME, predictions=False)
+    assert "energy" not in result and "force" not in result
+    assert result["target_energy"].tolist() == [-1.5]
+    assert result["target_force"].tolist() == [[1, 2, 3]]
+
+
+def test_reference_input_parser_bounds_frames_without_predicted_energies(tmp_path):
+    with pytest.raises(ResourceError, match="budget"):
+        arrays(
+            tmp_path,
+            INPUT_FRAME + INPUT_FRAME.replace("fixture:1", "fixture:2"),
+            predictions=False,
+            maximum_frames=1,
+        )
+
+
+def test_reference_input_parser_rejects_nonfinite_training_force(tmp_path):
+    with pytest.raises(ContractError, match="nonfinite"):
+        arrays(tmp_path, INPUT_FRAME.replace("1 2 3", "nan 2 3"), predictions=False)
+
+
+def test_reference_input_parser_requires_original_label_properties(tmp_path):
+    with pytest.raises(ContractError, match="malformed"):
+        arrays(tmp_path, INPUT_FRAME.replace("REF_forces:R:3", "forces:R:3"), predictions=False)

@@ -73,12 +73,47 @@ def check_source(root: Path):
 
 
 def check_dataset(records):
+    release = read_json(project_root() / "configs/rmd17-release-v4.json")
+    require(
+        records["version"] == release["version"] == 4 and records["doi"] == release["doi"],
+        "dataset release identity changed",
+    )
+    require(
+        records["family"] == "rMD17"
+        and records["level"] == "PBE/def2-SVP"
+        and records["license"] == release["license"],
+        "dataset family, electronic level or license changed",
+    )
+    expected = (
+        {f"rmd17_{m}.npz" for m in ("aspirin", "ethanol", "malonaldehyde", "salicylic")}
+        | {f"index_{role}_{seed:02}.csv" for role in ("train", "test") for seed in (1, 2, 3)}
+        | {"readme.txt"}
+    )
+    names = [record["name"] for record in records["files"]]
+    require(
+        set(names) == expected and len(names) == len(expected),
+        "pinned dataset population is missing or repeated",
+    )
+    pinned = {row["name"]: row for row in release["files"]}
     files = {}
     for record in records["files"]:
         path = Path(record["path"])
         require(
             path.is_file() and file_hash(path) == record["sha256"],
             "external dataset missing or changed",
+        )
+        reference = pinned[record["name"]]
+        require(
+            all(
+                record[key] == reference[key]
+                for key in ("id", "size", "download_url", "supplied_md5")
+            ),
+            "dataset file differs from the pinned author release",
+        )
+        require(
+            path.stat().st_size == reference["size"]
+            and file_hash(path, "md5") == reference["supplied_md5"],
+            "dataset bytes do not match the pinned author release",
         )
         files[record["name"]] = path
     return files
