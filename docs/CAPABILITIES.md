@@ -12,7 +12,7 @@ the requested execution or decisive evidence is missing. Test IDs refer to actua
 | M04 | Reveals and normalization | `data/ledger.py`, `training/engine.py` | Label access/reveal tests and verifier recomputation | diagnostic passed |
 | M05 | Original batched radius graph | `graphs/radius.py` | 10,000 independent all-pairs cases | diagnostic passed |
 | M06 | Smooth cutoff and cache | `graphs/radial.py`, `graphs/radius.py` | Cutoff derivatives and skin/batch invalidation tests | diagnostic passed |
-| M07 | Irrep feature types | `representations/features.py` | Contract implementation | partial; not threaded through every model layer |
+| M07 | Irrep feature types | `representations/features.py` | Every model interaction retains representation and graph IDs | diagnostic passed |
 | M08 | Scalar invariant potential | `models/potential.py` | Three original trained ethanol seeds | diagnostic passed |
 | M09 | O(3) equivariant composition | `models/potential.py` | Three original trained seeds and symmetry trials | diagnostic passed |
 | M10 | Quadratic higher-order readout | `models/potential.py` | Connected readout and no-higher-order integration ablation | diagnostic passed; full controlled ablation unverified |
@@ -23,7 +23,7 @@ the requested execution or decisive evidence is missing. Test IDs refer to actua
 | M15 | Force/Hessian differences | `evaluation/checks.py` | 1000 force and 100 Hessian checks | diagnostic passed |
 | M16 | Three-seed original selection | `training/engine.py` | Six histories and validation-optimal selected checkpoints | diagnostic passed |
 | M17 | Sample efficiency | `training/campaign.py` | One-budget ethanol; full matrix absent | unverified |
-| M18 | Pinned independent reference | `training/reference.py` | Separate subprocess adapter and XYZ export | unverified; no reference retraining |
+| M18 | Pinned independent reference | `training/reference.py` | Locked macOS environment and actual CPU training/export/evaluation | partial; full CUDA retrainings unverified |
 | M19 | Committee/calibration | `uncertainty/committee.py` | 27 tiny member runs and held-out calibration arrays | diagnostic passed; useful ranking unestablished |
 | M20 | Budgeted active acquisition | `acquisition/campaign.py`, `acquisition/policy.py` | Exact 8/16/32-label integration ledgers | diagnostic passed; required budgets/population unverified |
 | M21 | Uniform/diversity controls | `acquisition/policy.py` | Same initial rows across three policies | diagnostic passed |

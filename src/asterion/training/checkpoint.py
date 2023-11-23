@@ -7,8 +7,9 @@ import torch
 from safetensors.torch import load_file, save_file
 
 from asterion.artifacts.io import file_hash, object_hash, read_json, write_json
-from asterion.contracts.errors import IntegrityError
+from asterion.contracts.errors import ContractError, IntegrityError, ResourceError
 from asterion.models.potential import ModelConfig, make_model
+from asterion.training.identity import state_fingerprint
 
 
 def pack_tree(value, tensors: dict, prefix="state"):
@@ -47,6 +48,9 @@ def unpack_tree(value, tensors):
 
 
 def save_checkpoint(path: Path, model, optimizer, metadata: dict):
+    reserved = {"identity", "architecture", "optimizer", "weights_sha256", "state_sha256", "format"}
+    if reserved & metadata.keys():
+        raise IntegrityError("checkpoint metadata shadows reserved format fields")
     if path.exists():
         raise IntegrityError("checkpoint generation already exists")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -87,6 +91,13 @@ def save_checkpoint(path: Path, model, optimizer, metadata: dict):
 
 
 def load_checkpoint(path: Path, device="cpu", dtype=torch.float64):
+    if dtype not in {torch.float32, torch.float64} or torch.device(device).type not in {
+        "cpu",
+        "cuda",
+    }:
+        raise ContractError("checkpoint execution requires audited CPU/CUDA float32 or float64")
+    if torch.device(device).type == "cuda" and not torch.cuda.is_available():
+        raise ResourceError("checkpoint CUDA execution is unavailable")
     record = read_json(path / "checkpoint.json")
     identity = record.pop("identity")
     if record.get("format") != "asterion-safe-checkpoint-v1" or object_hash(record) != identity:
@@ -100,11 +111,32 @@ def load_checkpoint(path: Path, device="cpu", dtype=torch.float64):
             raise IntegrityError("checkpoint tensor hash mismatch")
     config = dict(record["architecture"])
     config["elements"] = tuple(config["elements"])
+    if config.get("composition") is not None:
+        config["composition"] = tuple(config["composition"])
     with torch.random.fork_rng(devices=[]):
         model = make_model(ModelConfig(**config)).to(device=device, dtype=dtype)
     model.load_state_dict(
         load_file(str(path / "model.safetensors"), device=str(device)), strict=True
     )
+    boundary = None
+    if record.get("origin") in {"original-force-loss-training", "original-random-initialization"}:
+        owner = path.parent
+        training = read_json(owner / "config.json")
+        if object_hash(training) != record["lineage"]:
+            raise IntegrityError("checkpoint training owner lineage mismatch")
+        split = read_json(owner / "split.json")
+        normalization = read_json(owner / "normalization.json")
+        prefix = normalization["fit_identities"][0].rsplit(":", 1)[0]
+        boundary = {
+            "fit": tuple(normalization["fit_identities"]),
+            "validation": tuple(f"{prefix}:{row}" for row in split["validation"]),
+            "calibration": tuple(f"{prefix}:{row}" for row in split["calibration"]),
+        }
+    model._asterion_provenance = {
+        "checkpoint": record,
+        "execution_state": state_fingerprint(model),
+        "boundary": boundary,
+    }
     return model, record
 
 

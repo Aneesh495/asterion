@@ -33,3 +33,15 @@ analysis must compare matched final evaluation units, training cost, diversity a
 The tiny integration experiment's error correlations are low and its bounds wide. It did not
 establish useful acquisition or shift-calibrated uncertainty. See [retained findings](FINDINGS.md).
 The original full 100/300/1000-label, three-policy, three-seed, two-molecule experiment is pending.
+
+Committee members must load original trained checkpoints. The constructor checks actual seed and
+checkpoint identities, distinct model objects, the physical task and executed parameter/buffer
+fingerprints. Precision conversion or weight updates after loading invalidate that identity.
+Inference checks the fingerprints before and after evaluation. Member list ownership is captured
+so a caller cannot remove a member by changing the original list.
+
+Retained training and validation identities are automatically excluded from calibration. Allowed
+calibration identities are the intersection of the three saved calibration roles. A caller cannot
+admit final evaluation labels by omitting a forbidden-row argument. Geometry identities must be
+unique within each inference/calibration population. Bounds require a finite nonnegative vector;
+zero bounds from a perfectly matched calibration sample remain available observations.

@@ -2,8 +2,8 @@
 
 Phase: interruption recovery and independent study validation. Full delivery remains incomplete.
 
-The current source passes 347 collected tests, 213 authored test functions, Ruff and mypy.
-`runs/recovery-validation-06/tests.xml` records the local invocation. The 400-authored-test gate
+The current source passes 383 collected tests, 249 authored test functions, Ruff and mypy.
+`runs/committee-validation-09/tests.xml` records the local invocation. The 400-authored-test gate
 and private implementation-depth gate remain unmet. No workload requirement was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
@@ -36,6 +36,13 @@ trajectories. Paired learning intervals use geometry-weighted temporal blocks. C
 verification cannot grant release status; final full verification still requires actual corruption
 controls and every scientific workload.
 
+Committee construction now requires three saved trained checkpoints with matching seed and
+identity records, distinct model objects and executed weight fingerprints. It rejects changed
+weights or precision and enforces the intersection of retained calibration roles automatically.
+Training and final evaluation labels cannot be admitted by omitting a caller forbidden list.
+Calibration requires finite nonnegative scores/errors, distinct geometry/member identities and
+valid fitted parameters. Tests use three genuinely trained original fixture models.
+
 ## Executed checks
 
 | Run | Observed result | Scope |
@@ -44,6 +51,9 @@ controls and every scientific workload.
 | `acquisition-integration-05` | Nine policy/budget rounds and 27 original committee members independently checked | Shared initial pool, calibration and decisions reconstructed; no policy advantage established |
 | `secondary-integration-05` | Original MD22 model, 64 held-out geometries, eight probes and two trajectories totaling 32 steps | Separate electronic level and composition; two-epoch integration only |
 | `recovery-validation-06` | 295 tests pass, including actual SIGINT/SIGTERM child termination and exact CPU training recovery | Current recovery source; no CUDA recovery claim |
+| `integration-08` | Two original models, primary and temporal-slice predictions, 32 weight probes, eight steps and 16 rejected controls | Frozen execution commit 83d8df4; two-epoch integration only |
+| `guarded-integration-08` | Two separately trained temporal-block models and 16 saved-weight probes | Frozen execution commit 83d8df4; small guarded comparison |
+| `ablation-integration-08` | Five genuine interventions and 40 saved-weight probes independently verified | Frozen execution commit 83d8df4; no useful two-epoch learning claim |
 
 Source-05 has digest `5b76e3a555780cd63159b89db737a2207da6a727b887ab830a373d4546163cf1`.
 The small runs barely change force error. They establish wiring and artifact checks, not useful
