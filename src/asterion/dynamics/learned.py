@@ -46,4 +46,5 @@ class CommitteeEvaluator:
             output.forces_mean,
             uncertainty=bound,
             uncertainty_available=True,
+            uncertainty_quantity="calibrated-mae-bound",
         )

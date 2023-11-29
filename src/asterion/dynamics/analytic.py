@@ -12,6 +12,10 @@ class ForceResult:
     uncertainty: float = 0.0
     neighbor_rebuilds: int = 0
     uncertainty_available: bool = False
+    uncertainty_quantity: str = "unavailable"
+
+
+UNCERTAINTY_CODES = {"unavailable": 0, "force-disagreement": 1, "calibrated-mae-bound": 2}
 
 
 class Harmonic:

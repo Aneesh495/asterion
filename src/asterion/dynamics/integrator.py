@@ -12,7 +12,7 @@ from asterion.contracts.units import (
     masses,
     temperature,
 )
-from asterion.dynamics.analytic import ForceResult
+from asterion.dynamics.analytic import UNCERTAINTY_CODES, ForceResult
 from asterion.dynamics.detectors import Detector, ValidityPolicy
 
 
@@ -60,7 +60,13 @@ def verlet(state: State, result: ForceResult, mass, dt) -> State:
 
 
 def snapshot(
-    state: State, numbers, uncertainty=0.0, rebuilds=0, noise=None, uncertainty_available=False
+    state: State,
+    numbers,
+    uncertainty=0.0,
+    rebuilds=0,
+    noise=None,
+    uncertainty_available=False,
+    uncertainty_quantity="unavailable",
 ):
     mass = masses(numbers)
     return {
@@ -73,6 +79,7 @@ def snapshot(
         "heat": state.heat_eV,
         "uncertainty": uncertainty,
         "uncertainty_available": uncertainty_available,
+        "uncertainty_quantity": UNCERTAINTY_CODES.get(uncertainty_quantity, -1),
         "neighbor_rebuilds": rebuilds,
         "temperature": temperature(state.velocities, mass) if len(numbers) > 1 else 0.0,
         "noise": np.zeros_like(state.positions) if noise is None else noise.copy(),
@@ -97,6 +104,14 @@ def write_trajectory(
         "physical_horizon_fs": completed * config.timestep_fs,
         "status": status,
         "reason": reason,
+        "uncertainty_quantity": next(
+            (
+                name
+                for name, code in UNCERTAINTY_CODES.items()
+                if code == int(frames[0]["uncertainty_quantity"])
+            ),
+            "invalid",
+        ),
         "trajectory_sha256": file_hash(directory / "trajectory.npz"),
         "initial_identity": object_hash(
             {"numbers": list(map(int, numbers)), "positions": frames[0]["positions"].tolist()}
@@ -165,6 +180,7 @@ def simulate(
                 initial.uncertainty,
                 initial.neighbor_rebuilds,
                 uncertainty_available=initial.uncertainty_available,
+                uncertainty_quantity=initial.uncertainty_quantity,
             )
         )
         reason = detector.forces(initial)
@@ -239,6 +255,7 @@ def simulate(
                 result.neighbor_rebuilds,
                 noise,
                 uncertainty_available=result.uncertainty_available,
+                uncertainty_quantity=result.uncertainty_quantity,
             )
         )
         if state.step % config.checkpoint_every == 0 or state.step == stop_after:

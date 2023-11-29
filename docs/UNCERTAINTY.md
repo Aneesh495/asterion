@@ -45,3 +45,10 @@ calibration identities are the intersection of the three saved calibration roles
 admit final evaluation labels by omitting a forbidden-row argument. Geometry identities must be
 unique within each inference/calibration population. Bounds require a finite nonnegative vector;
 zero bounds from a perfectly matched calibration sample remain available observations.
+
+Trajectory records distinguish unavailable scores, raw force disagreement and calibrated force-MAE
+bounds. Integer quantity codes and boolean availability are retained with every frame. Numeric zero
+does not imply unavailability. Independent replay rejects contradictory codes, changing quantities
+or metadata labels. The viewer uses that contract and labels calibrated bounds separately from
+sample disagreement. Force overlays share one display scale; generated frames have no reference
+labels, so reference/error overlays are disabled there.

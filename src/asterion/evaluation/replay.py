@@ -26,10 +26,25 @@ def replay_trajectory(directory: Path, tolerance=1e-9):
         "uncertainty",
         "neighbor_rebuilds",
         "temperature",
+        "uncertainty_available",
+        "uncertainty_quantity",
     }
     if not required <= a.keys() or not all(np.isfinite(value).all() for value in a.values()):
         raise IntegrityError("missing or nonfinite raw trajectory")
     count = len(a["positions"]) - 1
+    if (
+        a["uncertainty_available"].dtype.kind != "b"
+        or a["uncertainty_quantity"].dtype.kind not in "iu"
+        or not np.array_equal(a["uncertainty_available"], a["uncertainty_quantity"] != 0)
+        or not set(a["uncertainty_quantity"].tolist()) <= {0, 1, 2}
+    ):
+        raise IntegrityError("trajectory uncertainty availability or physical quantity changed")
+    quantities = {0: "unavailable", 1: "force-disagreement", 2: "calibrated-mae-bound"}
+    if (
+        len(set(a["uncertainty_quantity"].tolist())) != 1
+        or metadata["uncertainty_quantity"] != quantities[int(a["uncertainty_quantity"][0])]
+    ):
+        raise IntegrityError("trajectory mixes or mislabels uncertainty quantities")
     if count != metadata["completed_steps"] or not np.array_equal(a["step"], np.arange(count + 1)):
         raise IntegrityError("trajectory completion count disagrees with raw steps")
     config = metadata["config"]

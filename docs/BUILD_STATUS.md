@@ -2,8 +2,8 @@
 
 Phase: interruption recovery and independent study validation. Full delivery remains incomplete.
 
-The current source passes 383 collected tests, 249 authored test functions, Ruff and mypy.
-`runs/committee-validation-09/tests.xml` records the local invocation. The 400-authored-test gate
+The current source passes 394 collected tests, 260 authored test functions, Ruff and mypy.
+`runs/viewer-validation-10/tests.xml` records the local invocation. The 400-authored-test gate
 and private implementation-depth gate remain unmet. No workload requirement was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
@@ -42,6 +42,13 @@ weights or precision and enforces the intersection of retained calibration roles
 Training and final evaluation labels cannot be admitted by omitting a caller forbidden list.
 Calibration requires finite nonnegative scores/errors, distinct geometry/member identities and
 valid fitted parameters. Tests use three genuinely trained original fixture models.
+
+Acquisition-integration-09 executed and independently verified all nine rounds with the stricter
+committee contracts. The viewer now records and displays uncertainty quantity and availability,
+including available zero bounds. Raw replay rejects mislabeling. Actual browser checks exercised
+the shared force overlays, playback and a retained uncertainty-threshold failure at zero of 16
+steps. Reference/error overlays are disabled for generated coordinates. Console errors were absent.
+The browser screenshot and real committee trajectories are retained in `runs/viewer-10`.
 
 ## Executed checks
 

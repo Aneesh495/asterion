@@ -3,6 +3,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 
 from asterion.contracts.errors import ContractError
+from asterion.dynamics.analytic import UNCERTAINTY_CODES
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,10 @@ class Detector:
         return None
 
     def forces(self, result):
+        if result.uncertainty_quantity not in UNCERTAINTY_CODES or result.uncertainty_available != (
+            result.uncertainty_quantity != "unavailable"
+        ):
+            return "invalid-uncertainty-contract"
         if not np.isfinite(result.energy) or not np.isfinite(result.forces).all():
             return "nonfinite-energy-or-force"
         if result.forces.shape != (len(self.numbers), 3):
