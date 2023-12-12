@@ -57,6 +57,16 @@ def replay_trajectory(directory: Path, tolerance=1e-9):
     kinetic = 0.5 * np.sum(mass_kg[None, :, None] * si_velocity**2, axis=(1, 2)) / 1.602176634e-19
     if not np.allclose(kinetic, a["kinetic"], rtol=tolerance, atol=tolerance):
         raise IntegrityError("independent SI kinetic energy mismatch")
+    if len(mass_kg) > 1:
+        center_velocity = np.sum(mass_kg[None, :, None] * si_velocity, axis=1) / np.sum(mass_kg)
+        internal = si_velocity - center_velocity[:, None, :]
+        expected_temperature = np.sum(mass_kg[None, :, None] * internal**2, axis=(1, 2)) / (
+            (3 * len(mass_kg) - 3) * 1.380649e-23
+        )
+    else:
+        expected_temperature = np.zeros(len(si_velocity))
+    if not np.allclose(expected_temperature, a["temperature"], rtol=tolerance, atol=tolerance):
+        raise IntegrityError("independent internal-temperature accounting mismatch")
     dt_seconds = dt * 1e-15
     acceleration = a["forces"] * (1.602176634e-19 / 1e-10) / mass_kg[None, :, None]
     acceleration *= 1e-20

@@ -16,6 +16,14 @@ class ValidityPolicy:
     supported_elements: tuple[int, ...] = (1, 6, 7, 8)
 
     def validate(self):
+        values = (
+            self.minimum_distance,
+            self.maximum_force,
+            self.maximum_bond_ratio,
+            self.bond_reference_radius,
+        )
+        if not all(np.isfinite(value) for value in values):
+            raise ContractError("validity limits must be finite")
         if (
             min(
                 self.minimum_distance,
@@ -26,8 +34,16 @@ class ValidityPolicy:
             <= 0
         ):
             raise ContractError("validity limits must be positive")
-        if self.maximum_uncertainty is not None and self.maximum_uncertainty <= 0:
+        if self.maximum_uncertainty is not None and (
+            not np.isfinite(self.maximum_uncertainty) or self.maximum_uncertainty <= 0
+        ):
             raise ContractError("uncertainty threshold must be positive")
+        if (
+            not self.supported_elements
+            or len(set(self.supported_elements)) != len(self.supported_elements)
+            or not set(self.supported_elements) <= {1, 6, 7, 8}
+        ):
+            raise ContractError("detector chemistry must be a unique supported element set")
         return self
 
 

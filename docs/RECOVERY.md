@@ -37,3 +37,9 @@ match even if rebuild counters differ for a restarted learned evaluator.
 Failed experiments retain their files and error. Choose a new run identity for repaired source.
 Run `make stress` for analytic simulation recovery, force-loss training recovery, invalid geometry
 rejection and 30-minute inference memory sampling. Raw measurements remain outside Git.
+
+Simulation resume also binds the exact atomic identities, initial positions/velocities and detector
+policy. Changed masses or relaxed thresholds are new experiments. These inputs enter the initial
+state identity before the first integration. Nonfinite configuration values and invalid initial
+axes fail before run creation. Boolean uncertainty availability and its declared physical quantity
+remain separate from the numeric force score in resumed frames.

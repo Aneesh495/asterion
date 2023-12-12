@@ -19,6 +19,9 @@ SYMBOLS = {1: "H", 6: "C", 7: "N", 8: "O"}
 
 
 def masses(numbers: np.ndarray) -> np.ndarray:
+    numbers = np.asarray(numbers)
+    if numbers.ndim != 1 or not len(numbers) or numbers.dtype.kind not in "iu":
+        raise ContractError("atomic masses require a nonempty integer element vector")
     try:
         return np.array([MASSES[int(z)] for z in numbers], dtype=np.float64)
     except KeyError as error:
@@ -34,15 +37,26 @@ def convert_labels(energy: np.ndarray, force: np.ndarray, units: str):
 
 
 def kinetic_energy(velocity: np.ndarray, mass: np.ndarray) -> float:
+    velocity, mass = np.asarray(velocity), np.asarray(mass)
+    if mass.ndim != 1 or not len(mass) or not np.isfinite(mass).all() or np.any(mass <= 0):
+        raise ContractError("finite positive mass vector required")
     if velocity.shape != (len(mass), 3):
         raise ContractError("velocity must have shape [atoms,3]")
+    if not np.isfinite(velocity).all():
+        raise ContractError("finite physical velocities required")
     return float(0.5 * KINETIC_ENERGY * np.sum(mass[:, None] * velocity**2))
 
 
 def temperature(velocity: np.ndarray, mass: np.ndarray, removed_dof: int = 3) -> float:
+    velocity, mass = np.asarray(velocity), np.asarray(mass)
+    if removed_dof not in {0, 3}:
+        raise ContractError("temperature supports total or center-of-mass-removed kinetic degrees")
+    kinetic_energy(velocity, mass)
     dof = 3 * len(mass) - removed_dof
     if dof <= 0:
         raise ContractError("temperature requires positive degrees of freedom")
+    if removed_dof == 3:
+        velocity = velocity - np.sum(mass[:, None] * velocity, axis=0) / np.sum(mass)
     return 2 * kinetic_energy(velocity, mass) / (dof * BOLTZMANN_EV_K)
 
 

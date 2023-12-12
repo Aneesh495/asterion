@@ -27,14 +27,25 @@ class SimulationConfig:
     checkpoint_every: int = 50
 
     def validate(self):
-        if self.steps < 1 or not np.isfinite(self.timestep_fs) or self.timestep_fs <= 0:
+        if (
+            type(self.steps) is not int
+            or self.steps < 1
+            or type(self.checkpoint_every) is not int
+            or self.checkpoint_every < 1
+            or not np.isfinite(self.timestep_fs)
+            or self.timestep_fs <= 0
+        ):
             raise ContractError("positive steps and timestep required")
         if (
             self.ensemble not in {"NVE", "NVT"}
+            or not np.isfinite(self.temperature_K)
+            or not np.isfinite(self.friction_per_fs)
             or self.temperature_K < 0
             or self.friction_per_fs <= 0
         ):
             raise ContractError("invalid ensemble, temperature or friction")
+        if type(self.seed) is not int or self.seed < 0:
+            raise ContractError("simulation requires a nonnegative integer RNG seed")
         return self
 
 
@@ -136,9 +147,29 @@ def simulate(
     stop_after: int | None = None,
 ):
     config.validate()
-    numbers = np.asarray(numbers, dtype=np.int64)
+    numbers = np.asarray(numbers)
     mass = masses(numbers)
+    numbers = numbers.astype(np.int64, copy=False)
+    positions = np.asarray(positions)
+    velocities = np.asarray(velocities, dtype=np.float64)
+    if (
+        positions.shape != (len(numbers), 3)
+        or positions.dtype.kind != "f"
+        or not np.isfinite(positions).all()
+    ):
+        raise ContractError("finite floating initial positions with atom axes required")
+    positions = positions.astype(np.float64, copy=False)
+    if velocities.shape != positions.shape or not np.isfinite(velocities).all():
+        raise ContractError("finite velocity axes required")
     detector = Detector(numbers, positions, policy)
+    initial_state_identity = object_hash(
+        {
+            "numbers": numbers.tolist(),
+            "positions": positions.tolist(),
+            "velocities": velocities.tolist(),
+            "detector": detector.to_dict(),
+        }
+    )
     if directory.exists() and not resume:
         raise IntegrityError("simulation run collision")
     directory.mkdir(parents=True, exist_ok=True)
@@ -147,7 +178,11 @@ def simulate(
     state = None
     if resume:
         checkpoint = read_json(directory / "resume.json")
-        if checkpoint["config"] != asdict(config) or checkpoint["lineage"] != lineage:
+        if (
+            checkpoint["config"] != asdict(config)
+            or checkpoint["lineage"] != lineage
+            or checkpoint["initial_state_identity"] != initial_state_identity
+        ):
             raise IntegrityError("simulation resume lineage changed")
         path = directory / checkpoint["arrays"]
         if file_hash(path) != checkpoint["sha256"]:
@@ -166,8 +201,6 @@ def simulate(
         )
         rng.bit_generator.state = checkpoint["rng"]
     else:
-        if velocities.shape != positions.shape or not np.isfinite(velocities).all():
-            raise ContractError("finite velocity axes required")
         reason = detector.geometry(positions)
         if reason:
             raise ContractError(f"invalid initial state: {reason}")
@@ -269,6 +302,7 @@ def simulate(
                 {
                     "config": asdict(config),
                     "lineage": lineage,
+                    "initial_state_identity": initial_state_identity,
                     "arrays": name,
                     "sha256": file_hash(directory / name),
                     "rng": rng.bit_generator.state,
