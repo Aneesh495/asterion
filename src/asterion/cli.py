@@ -293,7 +293,14 @@ def dispatch(args):
         from asterion.evaluation.property_campaign import derivative_campaign
 
         return journal.execute(
-            "derivatives", lambda: derivative_campaign(model, geometries, runs / "derivatives")
+            "derivatives",
+            lambda: derivative_campaign(
+                model,
+                geometries,
+                runs / "derivatives",
+                checkpoint_identity=checkpoint["identity"],
+                source=read_json(run / "SOURCE_INPUTS.json"),
+            ),
         )
     if args.command == "bench":
         from asterion.evaluation.benchmark import benchmark

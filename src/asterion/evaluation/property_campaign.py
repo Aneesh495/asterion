@@ -56,13 +56,28 @@ def graph_cases(output: Path, count=10000):
 
 
 def derivative_campaign(
-    model, geometries, directory: Path, symmetry=1200, forces=1000, hessians=100
+    model,
+    geometries,
+    directory: Path,
+    symmetry=1200,
+    forces=1000,
+    hessians=100,
+    checkpoint_identity=None,
+    source=None,
 ):
+    from asterion.training.identity import state_fingerprint
+
+    if not geometries or any(
+        type(count) is not int or count < 1 for count in (symmetry, forces, hessians)
+    ):
+        raise ValueError("derivative campaign requires nonempty geometry and trial populations")
+    if next(model.parameters()).dtype != torch.float64 or next(model.parameters()).is_cuda:
+        raise ValueError("derivative reference campaign requires CPU float64")
     directory.mkdir(parents=True, exist_ok=True)
     symmetry_results, force_results, hessian_results = [], [], []
     started = time.perf_counter()
     for seed in range(symmetry):
-        result = symmetry_trial(model, geometries[seed % len(geometries)], seed)
+        result = symmetry_trial(model, geometries[seed % len(geometries)], seed, retain_trace=True)
         assert_symmetry(result, energy_tolerance=1e-7)
         symmetry_results.append(result)
     for seed in range(forces):
@@ -71,24 +86,33 @@ def derivative_campaign(
             np.random.default_rng(seed + 1900).normal(size=geometry.positions.shape) * 0.001
         )
         geometry = replace(geometry, positions=geometry.positions + displacement)
-        result = force_difference(model, geometry)
+        result = force_difference(model, geometry, retain_trace=True)
         if result["relative"] >= 1e-4:
             raise AssertionError(f"force finite difference failed: {result['relative']}")
-        force_results.append({k: v for k, v in result.items() if k not in {"finite", "autograd"}})
+        force_results.append(
+            {"seed": seed, **{k: v for k, v in result.items() if k not in {"finite", "autograd"}}}
+        )
     for seed in range(hessians):
         geometry = geometries[seed % len(geometries)]
         direction = np.random.default_rng(seed + 3900).normal(size=geometry.positions.shape)
         direction /= np.linalg.norm(direction)
-        result = hessian_difference(model, geometry, direction)
+        result = hessian_difference(model, geometry, direction, retain_trace=True)
         if result["relative"] >= 1e-4:
             raise AssertionError("independent Hessian-vector difference failed")
-        hessian_results.append({k: v for k, v in result.items() if k not in {"product", "finite"}})
+        hessian_results.append(
+            {"seed": seed, **{k: v for k, v in result.items() if k not in {"product", "finite"}}}
+        )
     record = {
         "symmetry": symmetry_results,
         "force": force_results,
         "hessian": hessian_results,
         "elapsed_seconds": time.perf_counter() - started,
         "dtype": "float64",
+        "checkpoint": checkpoint_identity,
+        "source": source,
+        "executed_state": state_fingerprint(model),
+        "base_geometries": [g.identity for g in geometries],
+        "format": "asterion-raw-derivatives-v1",
     }
     write_json(directory / "derivatives.json", record)
     return record
