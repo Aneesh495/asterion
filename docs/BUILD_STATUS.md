@@ -2,8 +2,8 @@
 
 Phase: interruption recovery and independent study validation. Full delivery remains incomplete.
 
-The current source passes 424 collected tests, 289 authored test functions, Ruff and mypy.
-`runs/mechanics-validation-11/tests.xml` records the local invocation. The 400-authored-test gate
+The current source passes 474 collected tests, 314 authored test functions, Ruff and mypy.
+`runs/derivative-validation-12b/tests.xml` records the local invocation. The 400-authored-test gate
 and private implementation-depth gate remain unmet. No workload requirement was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch

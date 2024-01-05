@@ -89,6 +89,22 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         )
     counts["property_cases"] = len(properties["cases"])
     derivatives = read_json(safe_member(root, index["derivatives"]))
+    from asterion.artifacts.derivatives import verify_derivative_campaign
+    from asterion.training.checkpoint import load_checkpoint
+
+    models = {}
+    for entry in read_json(root / "UNITS.json")["training"]:
+        directory = safe_member(root, entry["path"])
+        selected = read_json(directory / "selection.json")
+        model, checkpoint = load_checkpoint(safe_member(directory, selected["checkpoint"]))
+        models[checkpoint["identity"]] = model
+    derivative_data = {
+        record["name"]: Path(record["path"])
+        for record in read_json(root / "DATASETS.json")["files"]
+    }
+    verify_derivative_campaign(
+        root, index["derivatives"], read_json(root / "SOURCE_INPUTS.json"), models, derivative_data
+    )
     require(len(derivatives["symmetry"]) >= 1200, "symmetry trial workload shortened")
     require(
         len(derivatives["force"]) >= 1000 and len(derivatives["hessian"]) >= 100,

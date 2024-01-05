@@ -35,3 +35,12 @@ and has candidate status. Read-only candidate verification enforces full thresho
 controls to be absent. Controls invoke that same checker before, during and after corruption.
 Promotion creates a new final directory only when candidate and control manifest identities match.
 Default full verification and release reject candidate status. The candidate remains unchanged.
+
+Derivative campaigns retain original coordinates/elements, orthogonal transforms, permutations,
+translations, system energies/forces, central-difference energies, directional forces and Hessian
+products. Their index binds the actual saved checkpoint, executed float64 state fingerprint and
+source. The full checker independently reconstructs force differences, curvature, covariance,
+force/torque, additivity and batching errors from these values. It validates author coordinates
+and seeded perturbations, then replays eight source-selected cases per family using saved weights.
+It does not invoke the producer's numerical-check routines or regenerate missing traces. JSON
+chemistry element lists are restored to immutable tuples at the checker boundary.
