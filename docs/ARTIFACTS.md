@@ -44,3 +44,12 @@ force/torque, additivity and batching errors from these values. It validates aut
 and seeded perturbations, then replays eight source-selected cases per family using saved weights.
 It does not invoke the producer's numerical-check routines or regenerate missing traces. JSON
 chemistry element lists are restored to immutable tuples at the checker boundary.
+
+Full bundles retain `STAGES.json`, original stage logs and `STAGE_OUTPUTS.json`. The latter maps
+execution paths to copied observations without changing their bytes. Training receipts include
+all immutable generations, initialization, split/reveal/normalization and completed history.
+Evaluation receipts include predictions, baselines, intervals and shift observations. Other
+scientific stages retain their whole observation directories. A completed index alone cannot
+hide changed weights or absent raw files. Verification checks actual exit status, log hashes,
+elapsed budgets, exact observation ownership, stage order and successful continuation after
+retained failures. The inner CLI command must agree with its managed process definition.

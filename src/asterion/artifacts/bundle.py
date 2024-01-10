@@ -83,6 +83,61 @@ def authored_test_count():
     )
 
 
+def retain_stage_receipts(runs: Path, evidence: Path):
+    state = read_json(runs / "STAGES.json")
+    units = read_json(runs / "training-units.json")
+    primary = {entry["path"] for entry in units}
+    mapping = {}
+    prefixes = {
+        "guarded-shift",
+        "acquisition",
+        "ablations",
+        "reference",
+        "secondary",
+        "derivatives",
+        "analytic",
+        "faults",
+        "simulation-recovery",
+        "training-recovery",
+    }
+    for record in state["stages"]:
+        if record["status"] != "passed":
+            continue
+        for relative, expected in record["outputs"].items():
+            source = safe_member(runs, relative)
+            if file_hash(source) != expected:
+                raise IntegrityError("completed stage observation changed before bundle retention")
+            path = Path(relative)
+            first = path.parts[0]
+            if first in primary:
+                target = evidence / "training" / path
+            elif first == "simulation":
+                target = evidence / "trajectories" / Path(*path.parts[1:])
+            elif relative == "analytic/analytic.json":
+                target = evidence / "gates/analytic/original-analytic.json"
+            elif first in prefixes:
+                target = evidence / "gates" / path
+            elif relative in {
+                "properties.json",
+                "benchmark.json",
+                "memory-stress.json",
+                "tests.xml",
+            }:
+                target = evidence / "gates" / path
+            else:
+                target = evidence / "stage-observations" / path
+            if not target.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, target)
+            if file_hash(target) != expected:
+                raise IntegrityError("bundle stage relocation changed observation bytes")
+            mapping[relative] = {"path": str(target.relative_to(evidence)), "sha256": expected}
+    copy_observations(runs / "stage-logs", evidence / "stage-logs")
+    write_json(evidence / "STAGE_OUTPUTS.json", mapping)
+    shutil.copyfile(runs / "STAGES.json", evidence / "STAGES.json")
+    return mapping
+
+
 def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
     """Copy all mandatory raw families without claiming they passed verification."""
     report = build_diagnostic(config, storage, runs, evidence)
@@ -142,7 +197,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
             entry["path"] = new
     write_json(path, original)
     write_json(destination / "PATH_RELOCATION.json", relocation)
-    shutil.copyfile(runs / "STAGES.json", evidence / "STAGES.json")
+    retain_stage_receipts(runs, evidence)
     write_json(evidence / "GATE_OBSERVATIONS.json", index)
     properties = read_json(evidence / index["properties"])
     derivatives = read_json(evidence / index["derivatives"])

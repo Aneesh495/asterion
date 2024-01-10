@@ -20,6 +20,29 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     path = root / "GATE_OBSERVATIONS.json"
     require(path.is_file(), "full gate observation index is missing")
     index = read_json(path)
+    from asterion.artifacts.receipts import verify_command_receipts, verify_stage_receipts
+
+    names = (
+        "tests",
+        "data",
+        "train",
+        "evaluate",
+        "guarded-shift",
+        "simulate",
+        "acquire",
+        "ablate",
+        "reference",
+        "secondary",
+        "properties",
+        "derivatives",
+        "analytic",
+        "stress",
+        "bench",
+        "demo",
+    )
+    finals = verify_stage_receipts(root, names, scientific=True)
+    commands = tuple(name for name in names if name not in {"tests", "data"})
+    verify_command_receipts(root, commands, finals)
     required = {
         "junit",
         "properties",

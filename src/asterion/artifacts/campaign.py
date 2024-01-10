@@ -17,7 +17,7 @@ from typing import Any
 
 import torch
 
-from asterion.artifacts.io import file_hash, object_hash, read_json, write_json
+from asterion.artifacts.io import file_hash, object_hash, read_json, safe_member, write_json
 from asterion.artifacts.source import environment, project_root, source_inputs
 from asterion.contracts.errors import CancellationError, IntegrityError, ResourceError
 
@@ -76,12 +76,22 @@ def cancellation_signals():
 
 
 def output_inventory(root: Path, outputs):
+    root = root.resolve()
     inventory = {}
     for relative in outputs:
-        path = root / relative
-        if not path.exists() or path.is_symlink():
-            raise IntegrityError(f"declared stage output is absent or a symlink: {relative}")
-        files = [path] if path.is_file() else list(path.rglob("*"))
+        paths = (
+            sorted(root.glob(relative))
+            if any(mark in relative for mark in "*?[")
+            else [root / relative]
+        )
+        if not paths:
+            raise IntegrityError(f"declared stage output pattern has no observations: {relative}")
+        files: list[Path] = []
+        for path in paths:
+            path = safe_member(root, str(path.relative_to(root)))
+            if not path.exists():
+                raise IntegrityError(f"declared stage output is absent: {relative}")
+            files.extend([path] if path.is_file() else path.rglob("*"))
         retained = 0
         for item in files:
             if item.is_symlink():
@@ -246,6 +256,8 @@ class StageRunner:
         record: dict[str, Any] = {
             "name": stage.name,
             "definition": definition,
+            "stage": asdict(stage),
+            "working_directory": str(self.root.resolve()),
             "attempt": 1 if previous is None else previous.get("attempt", 1) + 1,
             "argv": list(stage.argv),
             "status": "running",
@@ -347,6 +359,37 @@ def full_preflight(config):
 
 
 def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
+    config = read_json(config_path)
+    names = [
+        f"{kind}-{molecule}-{budget}-{seed}"
+        for molecule in config["molecules"]
+        for seed in config["seeds"]
+        for kind in config["models"]
+        for budget in config["budgets"]
+    ]
+    generations = "epoch-[0-9][0-9][0-9][0-9][0-9]"
+    training_outputs = ("training-units.json",) + tuple(
+        f"{name}/{member}"
+        for name in names
+        for member in (
+            "config.json",
+            "split.json",
+            "SOURCE_INPUTS.json",
+            "normalization.json",
+            "history.json",
+            "selection.json",
+            "latest.json",
+            "completed.json",
+            "initial",
+            "reveal",
+            generations,
+        )
+    )
+    evaluation_outputs = ("evaluation-units.json",) + tuple(
+        f"{name}/{member}"
+        for name in names
+        for member in ("evaluation*", "shift*", "learning-paired.json", "leakage.json")
+    )
     prefix = (sys.executable, "-m", "asterion.cli")
 
     def command(name):
@@ -371,8 +414,8 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
             ("tests.xml",),
         ),
         Stage("data", command("data"), (), 3600, "resume"),
-        Stage("train", command("train"), ("training-units.json",), continuation="resume"),
-        Stage("evaluate", command("evaluate"), ("evaluation-units.json",), continuation="resume"),
+        Stage("train", command("train"), training_outputs, continuation="resume"),
+        Stage("evaluate", command("evaluate"), evaluation_outputs, continuation="resume"),
         Stage(
             "guarded-shift",
             command("guarded-shift"),
@@ -383,35 +426,35 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
         Stage(
             "simulate",
             command("simulate"),
-            ("simulation-units.json",),
+            ("simulation-units.json", "simulation"),
             continuation="restart",
             reset_paths=("simulation", "simulation-units.json"),
         ),
         Stage(
             "acquire",
             command("acquire"),
-            ("acquisition/acquisition-units.json",),
+            ("acquisition",),
             continuation="restart",
             reset_paths=("acquisition",),
         ),
         Stage(
             "ablate",
             command("ablate"),
-            ("ablations/ablation-units.json",),
+            ("ablations",),
             continuation="restart",
             reset_paths=("ablations",),
         ),
         Stage(
             "reference",
             command("reference"),
-            ("reference/reference-units.json",),
+            ("reference",),
             continuation="restart",
             reset_paths=("reference",),
         ),
         Stage(
             "secondary",
             command("secondary"),
-            ("secondary/secondary.json",),
+            ("secondary",),
             continuation="restart",
             reset_paths=("secondary",),
         ),
@@ -419,7 +462,7 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
         Stage(
             "derivatives",
             command("derivatives"),
-            ("derivatives/derivatives.json",),
+            ("derivatives",),
             3600,
             "restart",
             ("derivatives",),
@@ -427,7 +470,7 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
         Stage(
             "analytic",
             command("analytic"),
-            ("analytic/analytic.json",),
+            ("analytic",),
             3600,
             "restart",
             ("analytic",),
@@ -437,9 +480,9 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
             command("stress"),
             (
                 "memory-stress.json",
-                "faults/faults.json",
-                "simulation-recovery/recovery.json",
-                "training-recovery/recovery.json",
+                "faults",
+                "simulation-recovery",
+                "training-recovery",
             ),
             7200,
             "restart",
@@ -449,7 +492,7 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
         Stage(
             "demo",
             command("demo"),
-            ("viewer.html", "failure-viewer.html"),
+            ("viewer.html", "failure-viewer.html", "demo-failure"),
             3600,
             "restart",
             ("viewer.html", "failure-viewer.html", "demo-failure"),

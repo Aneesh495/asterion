@@ -62,7 +62,7 @@ def test_inventory_rejects_empty_directory(tmp_path):
 def test_inventory_rejects_linked_observation(tmp_path):
     (tmp_path / "value").write_bytes(b"data")
     (tmp_path / "link").symlink_to(tmp_path / "value")
-    with pytest.raises(IntegrityError, match="symlink"):
+    with pytest.raises(IntegrityError, match="linked|symlink"):
         output_inventory(tmp_path, ("link",))
 
 
@@ -189,6 +189,10 @@ def test_failed_stage_cannot_be_relabelled_as_completed(tmp_path):
 
 
 def test_full_stage_plan_preserves_all_required_families(tmp_path):
+    write_json(
+        tmp_path / "full.json",
+        {"molecules": ["ethanol"], "seeds": [1], "models": ["equivariant"], "budgets": [100]},
+    )
     stages = research_stages(tmp_path / "full.json", tmp_path / "data", tmp_path / "campaign")
     assert [x.name for x in stages] == [
         "tests",
@@ -212,6 +216,10 @@ def test_full_stage_plan_preserves_all_required_families(tmp_path):
 
 
 def test_resume_keeps_frozen_training_stage_definition(tmp_path):
+    write_json(
+        tmp_path / "full.json",
+        {"molecules": ["ethanol"], "seeds": [1], "models": ["equivariant"], "budgets": [100]},
+    )
     first = research_stages(tmp_path / "full.json", tmp_path / "data", tmp_path / "campaign")
     resumed = research_stages(
         tmp_path / "full.json", tmp_path / "data", tmp_path / "campaign", True
