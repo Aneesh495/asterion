@@ -1,5 +1,32 @@
 # Benchmark methodology
 
+Current `make bench` loads the selected original checkpoint at the configured training precision
+and device. Runtime format v2 retains all 740 samples: 30 repetitions of six modes at batch sizes
+1, 2, 4 and 8, ten 100-call inference repetitions and ten 100-step learned-force dynamics starts.
+It records the executing source, checkpoint, parameter fingerprint, author geometry identities,
+monotonic clock intervals and exact completed work. Existing output identities are never overwritten.
+
+The six short modes are fresh graph construction, neighbor reuse, energy plus force, force-loss
+backward, a Hessian-vector product and host/device coordinate round trips. CPU transfer measurements
+are copies, not accelerator transfer estimates. Short timings exclude collation. The first sample
+in each inference/backward/curvature cell retains outputs for independent saved-weight replay.
+Every graph sample is checked against NumPy all-pairs edge counts. Repeated coordinates reuse the
+cache after the first rebuild at each batch size.
+
+Dynamics timings include collation, neighbor updates and trajectory serialization. Each run starts
+from retained author coordinates with a reproducible 100 K velocity initialization and requests
+100 NVE steps of 0.1 fs. Failed starts remain in the population. Throughput uses completed steps,
+and the report retains failure reasons and completed physical horizons. Independent checking replays
+SI integration, initial velocities, cache rebuilds and saved forces along each trajectory. These
+observations do not establish long-horizon molecular stability or matched reference performance.
+
+Full verification requires the complete matrix, declared research backend and precision, retained
+evaluation geometries, genuine model outputs and raw trajectories. It rejects shortened work,
+duplicate cells, changed durations, invented memory, substituted forces/curvature and inflated
+dynamics throughput. The current CUDA measurement path remains unexecuted on this host.
+
+## Historical CPU timing
+
 `make bench RUN_ID=frozen-diagnostic-02` loads the selected original seed-1 equivariant checkpoint
 and retained ethanol geometries. It records raw timings, precision, device, atom count, graph edge
 count where applicable, repetition and cumulative native process peak RSS. The measured model is
@@ -34,7 +61,7 @@ not current tensor live bytes. The 30-minute `make stress` measures repeated ene
 on a retained genuine geometry and samples peak RSS every five seconds. Its final report records
 actual elapsed time and completed calls. Missing final output is an incomplete stress run.
 
-Full research measurements still need a device memory/resource pilot, true dynamics throughput,
-matched physical horizons, transfer costs, cache behavior during motion, acquisition total cost and
+Full research measurements still need a device memory/resource pilot, long-horizon dynamics,
+matched reference physical horizons and accuracy, accelerator transfer costs, acquisition total cost and
 matched reference accuracy. Energy-only inference cannot be compared to energy-plus-force costs.
 No 72-hour full campaign completion estimate has been measured.

@@ -1,9 +1,9 @@
 # Build status
 
-Phase: interruption recovery and independent study validation. Full delivery remains incomplete.
+Phase: independent runtime validation and failure retention. Full delivery remains incomplete.
 
-The current source passes 495 collected tests, 335 authored test functions, Ruff and mypy.
-`runs/receipt-validation-13/tests.xml` records the local invocation. The 400-authored-test gate
+The current source passes 543 collected tests, 359 authored test functions, Ruff and mypy.
+`runs/runtime-validation-14/tests.xml` records the local invocation. The 400-authored-test gate
 and private implementation-depth gate remain unmet. No workload requirement was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
@@ -49,6 +49,20 @@ including available zero bounds. Raw replay rejects mislabeling. Actual browser 
 the shared force overlays, playback and a retained uncertainty-threshold failure at zero of 16
 steps. Reference/error overlays are disabled for generated coordinates. Console errors were absent.
 The browser screenshot and real committee trajectories are retained in `runs/viewer-10`.
+
+Managed stages retain every published checkpoint generation, raw predictions, study observations,
+process log and failed attempt. Independent receipts check order, actual exits, continuation and
+relocated output hashes. `managed-integration-13` exercised four real CLI stages, two original
+models, 32 held-out predictions, eight learned steps and 32 saved-weight probes. All 16 actual
+corruption controls rejected, including 13 with recomputed manifests; positive verification passed
+before and after. Its execution commit is ece5cf7 and source digest is
+`c33ff1f6026fd8d99d5d1ab1bbe0cbf409c725313ce093025ec0f828b40ef8d5`.
+It is a two-epoch integration check, not useful-learning or full acceptance evidence.
+
+Runtime measurement now includes host/device copies, Hessian products and actual learned dynamics.
+The checker derives the full scaling matrix, replays saved outputs and SI trajectories, reconstructs
+velocity/cache traces and checks that throughput uses completed work. Both original architectures
+pass 48 new semantic cases. A dedicated current timing run is pending; CUDA timing remains unexecuted.
 
 ## Executed checks
 
@@ -98,6 +112,6 @@ No GitHub remote or hosted publication exists. The last account probe found an i
 keyring token. No paid resources were provisioned. Public publication needs a working account
 and direct user authorization; the attached brief alone does not supply it.
 
-Next: finish raw shift/ablation validation and campaign provenance, measure reference compatibility,
-complete viewer and uncertainty paths, then freeze source for new diagnostic and clean builds.
+Next: measure current runtime, finish initial failure retention and crash receipts, acquisition costs,
+viewer paths and resource pilot, then freeze source for new diagnostic and clean builds.
 On suitable authorized hardware, run the unchanged full workload and verify its actual outputs.

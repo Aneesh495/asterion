@@ -57,12 +57,12 @@ COMMANDS = (
 )
 
 
-def selected_model(runs):
+def selected_model(runs, device="cpu", dtype=torch.float64):
     units = read_json(runs / "training-units.json")
     entry = next(entry for entry in units if entry["model"] == "equivariant")
     run = runs / entry["path"]
     selection = read_json(run / "selection.json")
-    return entry, run, *load_checkpoint(run / selection["checkpoint"])
+    return entry, run, *load_checkpoint(run / selection["checkpoint"], device=device, dtype=dtype)
 
 
 def simulate_campaign(config, storage: Path, runs: Path):
@@ -285,7 +285,12 @@ def dispatch(args):
         return journal.execute(
             "analytic", lambda: {"completed": len(analytic_campaign(runs / "analytic"))}
         )
-    entry, run, model, checkpoint = selected_model(runs)
+    execution = (
+        config["training"] if args.command == "bench" else {"device": "cpu", "dtype": "float64"}
+    )
+    entry, run, model, checkpoint = selected_model(
+        runs, device=execution["device"], dtype=getattr(torch, execution["dtype"])
+    )
     pool, _ = load_rmd17(storage / "rmd17" / f"rmd17_{entry['molecule']}.npz", entry["molecule"])
     split = load_split(run / "split.json")
     geometries = [pool.geometry(row) for row in split.evaluation[:8]]
@@ -299,14 +304,21 @@ def dispatch(args):
                 geometries,
                 runs / "derivatives",
                 checkpoint_identity=checkpoint["identity"],
-                source=read_json(run / "SOURCE_INPUTS.json"),
+                source=source_inputs(project_root()),
             ),
         )
     if args.command == "bench":
         from asterion.evaluation.benchmark import benchmark
 
         result = journal.execute(
-            "bench", lambda: benchmark(model, geometries, runs / "benchmark.json")
+            "bench",
+            lambda: benchmark(
+                model,
+                geometries,
+                runs / "benchmark.json",
+                checkpoint_identity=checkpoint["identity"],
+                source=source_inputs(project_root()),
+            ),
         )
         return {"raw_samples": len(result["samples"]), "artifact": str(runs / "benchmark.json")}
     if args.command == "stress":

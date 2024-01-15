@@ -99,6 +99,7 @@ def retain_stage_receipts(runs: Path, evidence: Path):
         "faults",
         "simulation-recovery",
         "training-recovery",
+        "benchmark-dynamics",
     }
     for record in state["stages"]:
         if record["status"] != "passed":
@@ -155,6 +156,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "reference": "reference",
         "secondary": "secondary",
         "guarded_shift": "guarded-shift",
+        "benchmark_dynamics": "benchmark-dynamics",
     }
     endpoints = {
         "derivatives": "derivatives.json",
@@ -167,6 +169,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "reference": "reference-units.json",
         "secondary": "secondary.json",
         "guarded_shift": "guarded-units.json",
+        "benchmark_dynamics": "",
     }
     index = {"junit": "gates/tests.xml", "controls": "gates/full-controls.json"}
     destination = evidence / "gates"

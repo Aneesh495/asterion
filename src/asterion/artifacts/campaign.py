@@ -488,7 +488,14 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
             "restart",
             ("memory-stress.json", "faults", "simulation-recovery", "training-recovery"),
         ),
-        Stage("bench", command("bench"), ("benchmark.json",), 3600, "resume"),
+        Stage(
+            "bench",
+            command("bench"),
+            ("benchmark.json", "benchmark-dynamics"),
+            3600,
+            "restart",
+            ("benchmark.json", "benchmark-dynamics"),
+        ),
         Stage(
             "demo",
             command("demo"),

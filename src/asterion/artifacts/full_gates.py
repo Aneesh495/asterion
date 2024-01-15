@@ -53,6 +53,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         "faults",
         "memory",
         "benchmark",
+        "benchmark_dynamics",
         "ablations",
         "acquisitions",
         "reference",
@@ -116,11 +117,18 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     from asterion.training.checkpoint import load_checkpoint
 
     models = {}
+    checkpoint_paths = {}
+    evaluation_boundaries = {}
     for entry in read_json(root / "UNITS.json")["training"]:
         directory = safe_member(root, entry["path"])
         selected = read_json(directory / "selection.json")
         model, checkpoint = load_checkpoint(safe_member(directory, selected["checkpoint"]))
         models[checkpoint["identity"]] = model
+        checkpoint_paths[checkpoint["identity"]] = safe_member(directory, selected["checkpoint"])
+        prefix = read_json(directory / "normalization.json")["fit_identities"][0].rsplit(":", 1)[0]
+        evaluation_boundaries[checkpoint["identity"]] = [
+            f"{prefix}:{row}" for row in read_json(directory / "split.json")["evaluation"][:8]
+        ]
     derivative_data = {
         record["name"]: Path(record["path"])
         for record in read_json(root / "DATASETS.json")["files"]
@@ -217,12 +225,38 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     )
     counts["stress_seconds"] = memory["elapsed_seconds"]
     benchmark = read_json(safe_member(root, index["benchmark"]))
+    from asterion.artifacts.runtime import verify_runtime
+
     require(
-        benchmark["repetitions"] >= 30 and benchmark["long_repetitions"] >= 10,
-        "benchmark repetitions shortened",
+        benchmark["checkpoint"] in models
+        and benchmark["geometry_identities"] == evaluation_boundaries[benchmark["checkpoint"]],
+        "benchmark does not use a selected trained model and its retained evaluation geometries",
     )
     require(
-        all(sample["seconds"] > 0 for sample in benchmark["samples"]), "invalid raw latency sample"
+        safe_member(root, index["benchmark_dynamics"])
+        == safe_member(root, index["benchmark"]).parent / "benchmark-dynamics",
+        "benchmark dynamics observation index changed",
+    )
+    import torch
+
+    require(
+        benchmark["dtype"] == f"torch.{config['training']['dtype']}"
+        and benchmark["device"]
+        == ("cuda:0" if config["training"]["device"] == "cuda" else config["training"]["device"]),
+        "benchmark does not measure the declared research backend and precision",
+    )
+    timed_model, _ = load_checkpoint(
+        checkpoint_paths[benchmark["checkpoint"]], dtype=getattr(torch, config["training"]["dtype"])
+    )
+    counts.update(
+        runtime=verify_runtime(
+            root,
+            index["benchmark"],
+            timed_model,
+            read_json(root / "SOURCE_INPUTS.json"),
+            derivative_data,
+            full=True,
+        )
     )
     if candidate:
         require(not (root / index["controls"]).exists(), "candidate already contains controls")
