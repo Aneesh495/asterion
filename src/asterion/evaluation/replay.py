@@ -9,6 +9,10 @@ from asterion.contracts.errors import IntegrityError
 def replay_trajectory(directory: Path, tolerance=1e-9):
     """Independent SI accounting and integration equations from retained arrays."""
     metadata = read_json(directory / "trajectory.json")
+    if metadata.get("format") == "asterion-rejected-initial-v1":
+        from asterion.artifacts.rejection import rejected_initial
+
+        return rejected_initial(directory)
     if file_hash(directory / "trajectory.npz") != metadata["trajectory_sha256"]:
         raise IntegrityError("trajectory bytes changed")
     with np.load(directory / "trajectory.npz", allow_pickle=False) as data:

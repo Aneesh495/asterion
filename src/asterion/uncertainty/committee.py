@@ -5,6 +5,7 @@ import torch
 
 from asterion.contracts.errors import ContractError, IntegrityError
 from asterion.training.identity import state_fingerprint
+from asterion.uncertainty.moments import conformal_parameters, member_statistics
 
 
 @dataclass
@@ -123,15 +124,13 @@ class Committee:
             for model, state in zip(self.models, self.states, strict=True)
         ):
             raise IntegrityError("committee weights changed during inference")
-        force_std = force_stack.std(axis=0, ddof=1)
-        pointers = np.r_[0, np.cumsum([len(g.numbers) for g in geometries])]
-        scores = np.array(
-            [np.sqrt(np.mean(force_std[a:b] ** 2)) for a, b in zip(pointers[:-1], pointers[1:])]
+        energy_mean, force_mean, energy_std, force_std, scores = member_statistics(
+            energy_stack, force_stack, [len(g.numbers) for g in geometries]
         )
         return Disagreement(
-            energy_stack.mean(0),
-            force_stack.mean(0),
-            energy_stack.std(0, ddof=1),
+            energy_mean,
+            force_mean,
+            energy_std,
             force_std,
             scores,
             np.array([g.identity for g in geometries]),
@@ -214,10 +213,7 @@ class Calibration:
             or np.any(errors < 0)
         ):
             raise ContractError("invalid calibration values")
-        floor = max(float(np.median(scores) * 0.01), 1e-8)
-        ratios = errors / np.maximum(scores, floor)
-        rank = min(len(ratios), int(np.ceil((len(ratios) + 1) * (1 - alpha))))
-        multiplier = float(np.sort(ratios)[rank - 1])
+        multiplier, floor = conformal_parameters(scores, errors, alpha)
         return Calibration(
             multiplier, floor, alpha, len(scores), tuple(committee), tuple(identities)
         )
@@ -226,4 +222,11 @@ class Calibration:
         scores = np.asarray(scores)
         if scores.ndim != 1 or not np.isfinite(scores).all() or np.any(scores < 0):
             raise ContractError("finite nonnegative force-disagreement vector required")
-        return self.multiplier * np.maximum(scores, self.floor)
+        try:
+            with np.errstate(over="raise", invalid="raise"):
+                bounds = self.multiplier * np.maximum(scores, self.floor)
+        except FloatingPointError as error:
+            raise ContractError("calibrated bound exceeds finite physical output range") from error
+        if not np.isfinite(bounds).all():
+            raise ContractError("nonfinite calibrated force-error bound")
+        return bounds

@@ -113,12 +113,17 @@ def dynamics_observation(directory, sample, geometry, model, fingerprint, steps)
         ),
         "runtime dynamics omits end-to-end work",
     )
-    with np.load(directory / "trajectory.npz", allow_pickle=False) as archive:
+    rejected = replay.get("rejected_initial", False)
+    with np.load(
+        directory / ("failure.npz" if rejected else "trajectory.npz"), allow_pickle=False
+    ) as archive:
         arrays = {key: archive[key] for key in archive.files}
     require(
         np.array_equal(arrays["numbers"], geometry.numbers)
-        and np.array_equal(arrays["positions"][0], geometry.positions)
-        and not arrays["uncertainty_available"].any(),
+        and np.array_equal(
+            arrays["positions"] if rejected else arrays["positions"][0], geometry.positions
+        )
+        and (rejected or not arrays["uncertainty_available"].any()),
         "runtime dynamics starts from another geometry or changes force provider",
     )
     mass = np.array([{1: 1.008, 6: 12.011, 7: 14.007, 8: 15.999}[int(z)] for z in geometry.numbers])
@@ -130,9 +135,19 @@ def dynamics_observation(directory, sample, geometry, model, fingerprint, steps)
     )
     velocity *= np.sqrt(100 / observed_temperature)
     require(
-        np.allclose(velocity, arrays["velocities"][0], atol=1e-12, rtol=1e-10),
+        np.allclose(
+            velocity,
+            arrays["velocities"] if rejected else arrays["velocities"][0],
+            atol=1e-12,
+            rtol=1e-10,
+        ),
         "runtime dynamics initial temperature or RNG population changed",
     )
+    if rejected:
+        from asterion.artifacts.rejection import verify_rejected_model
+
+        verify_rejected_model(directory, model)
+        return replay
     rebuilds, reference = 0, None
     for position, actual in zip(arrays["positions"], arrays["neighbor_rebuilds"], strict=True):
         if reference is None or np.linalg.norm(position - reference, axis=1).max() >= 0.25:

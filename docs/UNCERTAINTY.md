@@ -6,6 +6,12 @@ deviation uses denominator two. The per-geometry score is the square root of the
 component standard deviations over all 3N components, in eV/angstrom. Element count does not
 silently turn a geometry into 3N independent uncertainty observations.
 
+Moment calculation promotes finite member outputs to float64 and scales each component before
+summing or squaring. Per-geometry RMS uses another scale to avoid overflow in squared deviations.
+Ordinary inputs reproduce direct sample moments. A mathematically unrepresentable deviation,
+calibration ratio or final bound raises a contract error; no infinity or clipped surrogate enters
+the production disagreement record.
+
 Committee mean force is the negative derivative of committee mean energy. A nonconservative
 force-head ablation cannot join the production committee. Sharing training labels is intentional;
 different member seeds do not make correlated models statistically independent estimators of a

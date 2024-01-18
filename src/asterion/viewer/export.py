@@ -14,7 +14,11 @@ def export_viewer(predictions: Path, trajectory: Path, output: Path, lineage: di
     replay_trajectory(trajectory)
     with np.load(predictions, allow_pickle=False) as raw:
         a = {key: raw[key] for key in raw.files}
-    with np.load(trajectory / "trajectory.npz", allow_pickle=False) as raw:
+    metadata = read_json(trajectory / "trajectory.json")
+    rejected = metadata.get("format") == "asterion-rejected-initial-v1"
+    with np.load(
+        trajectory / ("failure.npz" if rejected else "trajectory.npz"), allow_pickle=False
+    ) as raw:
         t = {key: raw[key] for key in raw.files}
     if not len(a["energy"]) or not len(t["positions"]):
         raise IntegrityError("viewer requires real nonempty predictions and trajectory")
@@ -32,33 +36,50 @@ def export_viewer(predictions: Path, trajectory: Path, output: Path, lineage: di
                 "identity": str(a["identities"][i]),
             }
         )
-    stride = max(1, (len(t["positions"]) + 999) // 1000)
-    indices = sorted(set(range(0, len(t["positions"]), stride)) | {len(t["positions"]) - 1})
-    frames = [
-        {
-            "positions": t["positions"][i].tolist(),
-            "numbers": t["numbers"].tolist(),
-            "force": t["forces"][i].tolist(),
-            "reference": None,
-            "energy": float(t["potential"][i]),
-            "identity": f"step {int(t['step'][i])}",
-            "uncertainty": float(t["uncertainty"][i]),
-            "uncertainty_available": bool(t["uncertainty_available"][i]),
-            "step": int(t["step"][i]),
+    if rejected:
+        frames = [
+            {
+                "positions": t["positions"].tolist(),
+                "numbers": t["numbers"].tolist(),
+                "force": None,
+                "reference": None,
+                "energy": None,
+                "identity": "rejected initial state",
+                "uncertainty": None,
+                "uncertainty_available": False,
+                "step": 0,
+            }
+        ]
+        history: dict[str, list] = {
+            key: []
+            for key in (
+                "potential",
+                "kinetic",
+                "heat",
+                "step",
+                "uncertainty",
+                "uncertainty_available",
+            )
         }
-        for i in indices
-    ]
-    metadata = read_json(trajectory / "trajectory.json")
-    payload = {
-        "samples": samples,
-        "frames": frames,
-        "trajectory": metadata,
-        "lineage": {
-            **lineage,
-            "predictions_sha256": file_hash(predictions),
-            "trajectory_sha256": metadata["trajectory_sha256"],
-        },
-        "history": {
+        binding = {"rejected_initial_sha256": metadata["failure_sha256"]}
+    else:
+        stride = max(1, (len(t["positions"]) + 999) // 1000)
+        indices = sorted(set(range(0, len(t["positions"]), stride)) | {len(t["positions"]) - 1})
+        frames = [
+            {
+                "positions": t["positions"][i].tolist(),
+                "numbers": t["numbers"].tolist(),
+                "force": t["forces"][i].tolist(),
+                "reference": None,
+                "energy": float(t["potential"][i]),
+                "identity": f"step {int(t['step'][i])}",
+                "uncertainty": float(t["uncertainty"][i]),
+                "uncertainty_available": bool(t["uncertainty_available"][i]),
+                "step": int(t["step"][i]),
+            }
+            for i in indices
+        ]
+        history = {
             key: t[key].tolist()
             for key in (
                 "potential",
@@ -68,7 +89,18 @@ def export_viewer(predictions: Path, trajectory: Path, output: Path, lineage: di
                 "uncertainty",
                 "uncertainty_available",
             )
+        }
+        binding = {"trajectory_sha256": metadata["trajectory_sha256"]}
+    payload = {
+        "samples": samples,
+        "frames": frames,
+        "trajectory": metadata,
+        "lineage": {
+            **lineage,
+            "predictions_sha256": file_hash(predictions),
+            **binding,
         },
+        "history": history,
     }
     template = Path(__file__).with_name("viewer.html").read_text()
     serialized = json.dumps(payload, allow_nan=False).replace("<", "\\u003c")

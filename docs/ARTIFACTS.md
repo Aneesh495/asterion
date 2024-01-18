@@ -26,6 +26,15 @@ potential and kinetic energy, temperature, heat, uncertainty, neighbor rebuilds 
 A failed candidate is retained separately. Independent SI reconstruction checks each completed
 integration and reports drift. An explicit failed trajectory can be a valid detector observation.
 
+An invalid initial output has no valid physical frame. Format
+`asterion-rejected-initial-v1` stores raw coordinates, velocities and elements in `failure.npz`.
+Returned force/energy/uncertainty values are retained even when nonfinite or malformed; an
+evaluation exception instead retains its type/message with outputs unavailable. Metadata records
+zero completed steps, zero valid frames and zero physical horizon. No `trajectory.npz` is created.
+Replay checks the raw reason and source inputs; saved-model checking reproduces the output or
+exception. Energy drift is unavailable for this empty physical trajectory. The viewer shows
+initial coordinates with unavailable force/energy and empty histories.
+
 Negative controls operate on disposable copies. Semantic controls update hashes before invoking
 the verifier. Their nonzero exits and diagnostics are retained. Diagnostic controls validate the
 diagnostic verifier, not the still-pending full research evidence verifier.

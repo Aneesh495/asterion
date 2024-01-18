@@ -2,9 +2,9 @@
 
 Phase: independent runtime validation and failure retention. Full delivery remains incomplete.
 
-The current source passes 543 collected tests, 359 authored test functions, Ruff and mypy.
-`runs/runtime-validation-14/tests.xml` records the local invocation. The 400-authored-test gate
-and private implementation-depth gate remain unmet. No workload requirement was lowered.
+The current source passes 593 collected tests, 406 authored test functions, Ruff and mypy.
+`runs/failure-validation-15/tests.xml` records the local invocation. The 400-authored-test gate
+is met. The private implementation-depth gate remains unmet. No workload requirement was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
 CPU compatibility run completed training, export and eight-geometry evaluation with the declared
@@ -62,7 +62,25 @@ It is a two-epoch integration check, not useful-learning or full acceptance evid
 Runtime measurement now includes host/device copies, Hessian products and actual learned dynamics.
 The checker derives the full scaling matrix, replays saved outputs and SI trajectories, reconstructs
 velocity/cache traces and checks that throughput uses completed work. Both original architectures
-pass 48 new semantic cases. A dedicated current timing run is pending; CUDA timing remains unexecuted.
+pass 48 new semantic cases. `runtime-integration-14` retained all 740 raw samples and ten actual
+100-step dynamics starts. Independent saved-weight and SI replay verified 1000 completed steps.
+Its execution commit is da6c029; the measured checkpoint comes from the two-epoch managed run.
+This is a CPU runtime observation, not a useful-learning or molecular-stability result. CUDA timing
+remains unexecuted.
+
+Rejected initial geometry, invalid force/energy and initial evaluation exceptions now retain
+`failure.npz` and an explicit rejected-initial record with zero valid frames. Nonfinite outputs
+remain raw observations, never valid trajectory values. Independent checking reconstructs failure
+reasons and can replay the rejection using saved weights. The viewer represents unavailable
+force/energy honestly. Actual killed-coordinator tests preserve unknown exit/end/duration, logs
+and successful continuation. A live orphan or unknown launch identity refuses duplicate work.
+
+Committee moments use scaled float64 arithmetic; finite large inputs do not overflow intermediate
+squares. Unrepresentable moments, calibration ratios and bounds fail explicitly. Dataset loading
+checks ZIP populations, NPY headers, native types, shapes and byte budgets before reading array
+bodies. Fractional elements/indices cannot be silently cast. All four author primary files and
+the 85109-frame, 42-atom MD22 file loaded successfully through the new bounded reader. This parser
+integration is retained in `runs/data-compatibility-15`.
 
 ## Executed checks
 

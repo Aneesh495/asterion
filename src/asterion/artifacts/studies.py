@@ -18,6 +18,11 @@ def model_trajectory(directory, model, identity, source):
     metadata = read_json(directory / "trajectory.json")
     require(metadata["lineage"] == identity, "study trajectory uses another model")
     replay = replay_trajectory(directory)
+    if replay.get("rejected_initial"):
+        from asterion.artifacts.rejection import verify_rejected_model
+
+        verify_rejected_model(directory, model)
+        return metadata, replay
     with np.load(directory / "trajectory.npz", allow_pickle=False) as raw:
         arrays = {key: raw[key] for key in raw.files}
     probes = sorted(

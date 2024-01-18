@@ -63,12 +63,28 @@ def verify_stage_receipts(root: Path, expected_names, scientific=False):
             and object_hash(specification) == row["definition"],
             "campaign stage command or definition changed",
         )
-        require(
-            row["ended_ns"] >= row["started_ns"]
-            and np.isfinite(row["elapsed_seconds"])
-            and row["elapsed_seconds"] > 0,
-            "invalid retained campaign clock or elapsed work",
-        )
+        if row.get("exit_observed") is False:
+            require(
+                row["status"] == "interrupted"
+                and row["exit"] is None
+                and row["ended_ns"] is None
+                and row["elapsed_seconds"] is None
+                and row["recovery"] == "lost-coordinator-and-absent-child"
+                and type(row["recovered_ns"]) is int
+                and row["recovered_ns"] >= row["started_ns"]
+                and type(row["child_pid"]) is int
+                and row["child_pid"] > 0
+                and row["error"]
+                == "coordinator-recovery: prior child is absent; exit and end time unavailable",
+                "recovered campaign attempt invents an unobserved exit or duration",
+            )
+        else:
+            require(
+                row["ended_ns"] >= row["started_ns"]
+                and np.isfinite(row["elapsed_seconds"])
+                and row["elapsed_seconds"] > 0,
+                "invalid retained campaign clock or elapsed work",
+            )
         for channel in ("stdout", "stderr"):
             path = safe_member(root, row[channel])
             require(

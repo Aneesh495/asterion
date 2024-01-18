@@ -25,6 +25,11 @@ definition. Passed stages require unchanged output hashes. Training resumes comm
 work. Stages without a continuation mechanism archive owned partial outputs and restart from
 their declared inputs; failed attempts remain in `STAGES.json` and `stage-attempts/`.
 After SIGKILL, a live orphan child is never duplicated. Let that owned process finish before resume.
+When the recorded child is absent, recovery marks the prior attempt interrupted and retains its
+logs. Its exit, actual end and elapsed duration remain null because the killed coordinator never
+observed them. A separate recovery timestamp records detection. The next successful attempt links
+to that prior attempt. If the coordinator died before recording a child identity, continuation
+refuses to duplicate work; the launch window cannot be inferred safely.
 CUDA checkpoints preserve RNG state but do not promise bitwise continuation on a different device
 population. CUDA recovery has not been executed on this host.
 
@@ -43,3 +48,5 @@ policy. Changed masses or relaxed thresholds are new experiments. These inputs e
 state identity before the first integration. Nonfinite configuration values and invalid initial
 axes fail before run creation. Boolean uncertainty availability and its declared physical quantity
 remain separate from the numeric force score in resumed frames.
+A rejected initial observation has no integration checkpoint and cannot resume. Repair its inputs
+or evaluator under a new run identity.

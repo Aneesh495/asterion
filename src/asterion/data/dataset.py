@@ -7,6 +7,7 @@ from asterion.artifacts.io import file_hash
 from asterion.contracts.errors import ContractError, LabelAccessError
 from asterion.contracts.geometry import Chemistry, Geometry, Label
 from asterion.contracts.units import convert_labels
+from asterion.data.archive import dataset_arrays, dataset_size, validate_native_arrays
 
 
 @dataclass(frozen=True)
@@ -59,16 +60,22 @@ class LabelOracle:
 
 
 def load_rmd17(path: Path, name: str) -> tuple[CoordinatePool, LabelOracle]:
-    with np.load(path, allow_pickle=False) as data:
-        required = {"nuclear_charges", "coords", "energies", "forces", "old_indices"}
-        if not required <= set(data.files):
-            raise ContractError("rMD17 keys missing")
-        numbers = np.array(data["nuclear_charges"], dtype=np.int64)
-        coordinates = np.array(data["coords"], dtype=np.float64)
-        indices = np.array(data["old_indices"], dtype=np.int64)
-        energy, force = convert_labels(
-            np.array(data["energies"]).reshape(-1), np.array(data["forces"]), "kcal/mol"
-        )
+    dataset_size(path)
+    identity = file_hash(path)
+    data = dataset_arrays(path, {"nuclear_charges", "coords", "energies", "forces", "old_indices"})
+    validate_native_arrays(
+        data["nuclear_charges"],
+        data["coords"],
+        data["energies"],
+        data["forces"],
+        data["old_indices"],
+    )
+    numbers = np.array(data["nuclear_charges"], dtype=np.int64)
+    coordinates = np.array(data["coords"], dtype=np.float64)
+    indices = np.array(data["old_indices"], dtype=np.int64)
+    energy, force = convert_labels(data["energies"].reshape(-1), data["forces"], "kcal/mol")
+    if file_hash(path) != identity:
+        raise ContractError("rMD17 dataset changed during loading")
     if coordinates.ndim != 3 or coordinates.shape[1:] != (len(numbers), 3):
         raise ContractError("invalid rMD17 coordinate axes")
     if len(indices) != len(coordinates) or len(set(indices.tolist())) != len(indices):
@@ -77,7 +84,7 @@ def load_rmd17(path: Path, name: str) -> tuple[CoordinatePool, LabelOracle]:
         raise ContractError("invalid coordinate values")
     for array in (numbers, coordinates, indices):
         array.setflags(write=False)
-    pool = CoordinatePool(numbers, coordinates, indices, file_hash(path), name, Chemistry())
+    pool = CoordinatePool(numbers, coordinates, indices, identity, name, Chemistry())
     pool.geometry(0)
     return pool, LabelOracle(pool, energy.astype(np.float64), force.astype(np.float64))
 
@@ -85,14 +92,20 @@ def load_rmd17(path: Path, name: str) -> tuple[CoordinatePool, LabelOracle]:
 def load_md22(
     path: Path, name: str, expected_hash: str, level: str = "PBE+MBD"
 ) -> tuple[CoordinatePool, LabelOracle]:
+    dataset_size(path)
     if file_hash(path) != expected_hash:
         raise ContractError("MD22 dataset changed")
-    with np.load(path, allow_pickle=False) as data:
-        numbers = np.asarray(data["z"], dtype=np.int64)
-        coordinates = np.asarray(data["R"], dtype=np.float64)
-        energy, force = convert_labels(np.asarray(data["E"]).reshape(-1), data["F"], "kcal/mol")
+    data = dataset_arrays(path, {"z", "R", "E", "F"})
+    validate_native_arrays(data["z"], data["R"], data["E"], data["F"])
+    numbers = np.asarray(data["z"], dtype=np.int64)
+    coordinates = np.asarray(data["R"], dtype=np.float64)
+    energy, force = convert_labels(data["E"].reshape(-1), data["F"], "kcal/mol")
+    if file_hash(path) != expected_hash:
+        raise ContractError("MD22 dataset changed during loading")
     if coordinates.ndim != 3 or coordinates.shape[1:] != (len(numbers), 3):
         raise ContractError("MD22 coordinate axes mismatch")
+    for array in (numbers, coordinates):
+        array.setflags(write=False)
     pool = CoordinatePool(
         numbers,
         coordinates,

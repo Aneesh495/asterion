@@ -1,5 +1,14 @@
 # Data card and splitting
 
+Dataset archives are bounded to 512 MiB compressed and expanded, 128 members and 8192-byte array
+headers. The reader supports the author files' NPY v1/v2 native arrays, checks declared body sizes
+before allocation and rejects duplicate/unsafe names, encrypted entries, objects and structured
+arrays. It loads only required fields. Native coordinates/labels must be float32 or float64;
+elements and original indices must be integers before conversion. Coordinates, atom axes,
+label axes and finite values are validated, and hashes are checked across loading. Returned
+coordinate arrays are immutable. The binary contract follows the
+[NumPy format specification](https://numpy.org/doc/2.2/reference/generated/numpy.lib.format.html).
+
 rMD17 release v4 is pinned by the author metadata in `configs/rmd17-release-v4.json`. The required
 individual files are aspirin, ethanol, malonaldehyde and salicylic. Each has 100,000 geometries.
 The released name for salicylic acid is `rmd17_salicylic.npz`. Author MD5 and local SHA256 identities

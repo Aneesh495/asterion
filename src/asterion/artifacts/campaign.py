@@ -219,6 +219,31 @@ class StageRunner:
         plan["completed"] = True
         write_json(plan_path, plan)
 
+    def recover_lost_attempt(self, previous):
+        """A dead orphan is observable; its exit and actual end time are unavailable."""
+        pid = previous.get("child_pid")
+        if type(pid) is not int or pid <= 0:
+            raise IntegrityError("previous stage launch identity is unknown; cannot duplicate work")
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            pass
+        else:
+            raise IntegrityError("previous stage process remains alive; cannot duplicate work")
+        previous.update(
+            status="interrupted",
+            exit=None,
+            exit_observed=False,
+            ended_ns=None,
+            elapsed_seconds=None,
+            recovered_ns=time.time_ns(),
+            recovery="lost-coordinator-and-absent-child",
+            error="coordinator-recovery: prior child is absent; exit and end time unavailable",
+        )
+        for channel in ("stdout", "stderr"):
+            previous[f"{channel}_sha256"] = file_hash(safe_member(self.run, previous[channel]))
+        write_json(self.state_path, self.state)
+
     def execute(self, stage: Stage):
         stage.validate()
         previous = next(
@@ -240,15 +265,8 @@ class StageRunner:
                 raise IntegrityError("interrupted stage definition changed")
             if previous["status"] not in {"running", "interrupted", "failed"}:
                 raise IntegrityError("invalid previous stage status")
-            if previous["status"] == "running" and previous.get("child_pid"):
-                try:
-                    os.kill(previous["child_pid"], 0)
-                except ProcessLookupError:
-                    pass
-                else:
-                    raise IntegrityError(
-                        "previous stage process remains alive; cannot duplicate work"
-                    )
+            if previous["status"] == "running":
+                self.recover_lost_attempt(previous)
             if stage.continuation == "restart":
                 self.archive_partial(stage, previous.get("attempt", 1))
         logs = self.run / "stage-logs"

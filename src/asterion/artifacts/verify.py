@@ -615,6 +615,11 @@ def verify(root: Path, expected_profile="full", candidate=False):
             metadata["lineage"] in checkpoints, "trajectory has no retained trained-model lineage"
         )
         model = checkpoints[metadata["lineage"]]
+        if metadata.get("format") == "asterion-rejected-initial-v1":
+            from asterion.artifacts.rejection import verify_rejected_model
+
+            verify_rejected_model(directory, model)
+            continue
         arrays = read_arrays(directory / "trajectory.npz")
         indices = sorted(
             range(len(arrays["positions"])),

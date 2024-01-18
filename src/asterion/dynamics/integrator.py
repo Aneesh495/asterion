@@ -177,6 +177,10 @@ def simulate(
     frames = []
     state = None
     if resume:
+        if (directory / "trajectory.json").exists() and read_json(
+            directory / "trajectory.json"
+        ).get("format") == "asterion-rejected-initial-v1":
+            raise IntegrityError("rejected initial state has no valid integration checkpoint")
         checkpoint = read_json(directory / "resume.json")
         if (
             checkpoint["config"] != asdict(config)
@@ -201,10 +205,45 @@ def simulate(
         )
         rng.bit_generator.state = checkpoint["rng"]
     else:
+        from asterion.dynamics.rejection import reject_initial
+
         reason = detector.geometry(positions)
         if reason:
-            raise ContractError(f"invalid initial state: {reason}")
-        initial = evaluator(positions, numbers)
+            return reject_initial(
+                directory, numbers, positions, velocities, config, detector, lineage, reason
+            )
+        try:
+            initial = evaluator(positions, numbers)
+        except (AsterionError, FloatingPointError) as error:
+            return reject_initial(
+                directory,
+                numbers,
+                positions,
+                velocities,
+                config,
+                detector,
+                lineage,
+                f"force-evaluation:{error}",
+                error=error,
+            )
+        reason = detector.forces(initial)
+        if reason in {
+            "nonfinite-energy-or-force",
+            "invalid-force-shape",
+            "invalid-uncertainty",
+            "invalid-uncertainty-contract",
+        }:
+            return reject_initial(
+                directory,
+                numbers,
+                positions,
+                velocities,
+                config,
+                detector,
+                lineage,
+                reason,
+                result=initial,
+            )
         state = State(positions.copy(), velocities.copy(), initial.forces.copy(), initial.energy)
         frames.append(
             snapshot(
@@ -216,7 +255,6 @@ def simulate(
                 uncertainty_quantity=initial.uncertainty_quantity,
             )
         )
-        reason = detector.forces(initial)
         if reason:
             return write_trajectory(
                 directory, frames, numbers, config, detector, lineage, "failed", reason, positions
