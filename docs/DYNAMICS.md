@@ -48,3 +48,24 @@ Atomic snapshots publish immutable arrays and metadata before updating a pointer
 state and completed frames resume from that pointer. Rebuilding a learned neighbor cache after
 recovery may change diagnostic rebuild counts without changing the force. CPU analytic recovery
 is exact in retained arrays; accelerator continuation remains an unmeasured numerical contract.
+
+The separate learned study uses selected conservative weights and the first retained evaluation
+geometry for each declared molecule/seed. Full execution runs a 300 K NVT path for 1000 steps at
+0.1 fs. Three NVE paths use the same initial state and timesteps 0.1, 0.05 and 0.025 fs, with
+1000, 2000 and 4000 requested steps respectively. Their completed horizons must match before
+coordinate differences are compared. Failed refinements remain recorded with comparison
+unavailable. The observed coarse/middle difference ratio is reported without an asymptotic-order
+claim. CPU float64 is explicit for this physical-check study.
+
+Structural reports exclude the initial frame. Bond references use the detector's declared
+initial-distance heuristic, with species-pair histograms on fixed 0.05-angstrom bins from zero to
+six angstrom. Out-of-range observations remain explicit counts. Means and sample deviations use
+all retained samples, including overflow values. The time series is correlated; these deviations
+are distributions of a finite path, not independent-frame standard errors or equilibrium estimates.
+
+Temperature autocorrelation uses the centered recorded series and up to 200 lags. The positive
+sequence before its first nonpositive value supplies a finite-path integrated-time diagnostic.
+Constant and short series report this quantity unavailable. Center-of-mass displacement and
+internal angular momentum changes are derived from retained masses, coordinates and velocities.
+NVT drift subtracts the actual recorded thermostat heat. These checks cannot supply electronic
+structure truth along generated coordinates.

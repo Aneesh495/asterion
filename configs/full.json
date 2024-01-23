@@ -13,6 +13,7 @@
   "architecture": {"width": 24, "depth": 3, "radial": 12, "lmax": 2, "cutoff": 5.0},
   "training": {"learning_rate": 0.003, "energy_weight": 0.1, "force_weight": 1.0, "threads": 4, "dtype": "float32", "device": "cuda"},
   "simulation": {"steps": 10000, "timestep_fs": 0.1, "temperatures_K": [100, 300, 500], "starts_per_temperature": 3},
+  "dynamics_study": {"molecules": ["aspirin", "ethanol"], "steps": 1000, "refinement_steps": 1000, "temperature_K": 300, "timesteps_fs": [0.1, 0.05, 0.025]},
   "acquisition_molecules": ["ethanol", "malonaldehyde"],
   "acquisition_budgets": [100, 300, 1000],
   "ablations": ["lmax", "higher_order", "smoothness", "force_loss", "policy"],

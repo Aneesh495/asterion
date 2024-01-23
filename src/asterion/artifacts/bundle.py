@@ -49,7 +49,11 @@ def build_diagnostic(config, storage: Path, runs: Path, evidence: Path):
     write_json(evidence / "DATASETS.json", dataset)
     write_json(evidence / "ENVIRONMENT.json", environment())
     write_json(evidence / "CAMPAIGN.json", config)
-    write_json(evidence / "UNITS.json", {"training": copied, "trajectories": retained})
+    units: dict = {"training": copied, "trajectories": retained}
+    if "dynamics_study" in config:
+        copy_observations(runs / "simulation/studies", evidence / "trajectories/studies")
+        units["dynamics_study"] = "trajectories/studies/study.json"
+    write_json(evidence / "UNITS.json", units)
     steps = sum(
         read_json(evidence / entry["path"] / "trajectory.json")["completed_steps"]
         for entry in retained
@@ -172,6 +176,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "benchmark_dynamics": "",
     }
     index = {"junit": "gates/tests.xml", "controls": "gates/full-controls.json"}
+    index["dynamics_study"] = read_json(evidence / "UNITS.json")["dynamics_study"]
     destination = evidence / "gates"
     destination.mkdir()
     shutil.copyfile(runs / "tests.xml", destination / "tests.xml")

@@ -54,6 +54,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         "memory",
         "benchmark",
         "benchmark_dynamics",
+        "dynamics_study",
         "ablations",
         "acquisitions",
         "reference",
@@ -62,6 +63,14 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         "guarded_shift",
     }
     require(required <= index.keys(), "full gate observation families are missing")
+    require(
+        config["dynamics_study"]["steps"] >= 1000
+        and config["dynamics_study"]["refinement_steps"] >= 1000
+        and len(config["dynamics_study"]["molecules"]) >= 2
+        and config["dynamics_study"]["timesteps_fs"] == [0.1, 0.05, 0.025]
+        and index["dynamics_study"] == read_json(root / "UNITS.json")["dynamics_study"],
+        "separate thermostat or matched-horizon refinement study shortened",
+    )
     counts = {}
     test_functions: list[tuple[str, str]] = []
     for source in (project_root() / "tests").rglob("*.py"):

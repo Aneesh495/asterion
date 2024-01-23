@@ -109,6 +109,10 @@ def simulate_campaign(config, storage: Path, runs: Path):
                     }
                 )
                 write_json(runs / "simulation-units.json", outcomes)
+    if "dynamics_study" in config:
+        from asterion.training.dynamics_study import dynamics_study
+
+        dynamics_study(config, storage, runs)
     return outcomes
 
 

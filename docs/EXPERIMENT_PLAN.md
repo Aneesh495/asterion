@@ -37,6 +37,10 @@ NVE trajectories use held-out initial states at 100,300,500 K. The full profile 
 starts and requires one million valid executed steps plus at least 90% core-domain completion.
 Failures remain in the denominator. No replacement starts are currently authorized by the frozen
 profile. NVT runs are separate and account for heat exchanged with a stochastic thermostat.
+The additional learned study fixes aspirin/ethanol, all three seeds and 300 K. Each selected model
+has one 100 fs NVT path and three NVE refinements at the same 100 fs horizon. Completed primary
+NVE steps are counted separately from these additional study steps. Short CPU study cases test
+the code path and cannot establish thermostat equilibration or molecular stability.
 
 Full gates require 400 authored semantic tests, 10,000 generated contract cases, 1200 symmetry
 trials, 1000 force checks, 100 Hessian checks, 100 analytic fixtures at three timesteps,

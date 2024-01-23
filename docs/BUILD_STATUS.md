@@ -1,9 +1,9 @@
 # Build status
 
-Phase: independent runtime validation and failure retention. Full delivery remains incomplete.
+Phase: learned thermostat/refinement integration and study analysis. Full delivery remains incomplete.
 
-The current source passes 593 collected tests, 406 authored test functions, Ruff and mypy.
-`runs/failure-validation-15/tests.xml` records the local invocation. The 400-authored-test gate
+The current source passes 606 collected tests, 419 authored test functions, Ruff and mypy.
+`runs/dynamics-validation-16/tests.xml` records the local invocation. The 400-authored-test gate
 is met. The private implementation-depth gate remains unmet. No workload requirement was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
@@ -81,6 +81,19 @@ checks ZIP populations, NPY headers, native types, shapes and byte budgets befor
 bodies. Fractional elements/indices cannot be silently cast. All four author primary files and
 the 85109-frame, 42-atom MD22 file loaded successfully through the new bounded reader. This parser
 integration is retained in `runs/data-compatibility-15`.
+
+Separate learned NVT and matched-horizon refinement studies are now connected to simulation and
+bundle verification. The full protocol specifies two molecules, three seeds, a 1000-step NVT
+path and three NVE refinements at 0.1/0.05/0.025 fs sharing a 100 fs horizon. These studies retain
+temperature time correlations, species-pair bond distributions, center-of-mass/angular momentum
+changes and heat-adjusted drift. Initial frames are excluded from structural samples. The checker
+reconstructs each report, source geometry, initial velocity and saved-weight trajectory, and
+rejects missing/shortened studies. CPU fixture tests pass; fresh learned-model integration is pending.
+
+The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
+It displays unavailable energy/force, disables force overlays and shows the retained collision
+reason at zero of 16 steps. No console errors or horizontal overflow were observed. The screenshot
+and DOM observations are retained under `runs/viewer-10/initial-rejection-15`.
 
 ## Executed checks
 

@@ -633,6 +633,21 @@ def verify(root: Path, expected_profile="full", candidate=False):
                 and np.allclose(force.detach().numpy(), arrays["forces"][i], rtol=1e-7, atol=1e-9),
                 "trajectory force or energy does not belong to saved weights",
             )
+    if "dynamics_study" in config:
+        from asterion.artifacts.dynamics_study import verify_dynamics_study
+
+        owners = {}
+        for entry in units["training"]:
+            owner = safe_member(root, entry["path"])
+            selection = read_json(owner / "selection.json")
+            identity = read_json(safe_member(owner, selection["checkpoint"]) / "checkpoint.json")[
+                "identity"
+            ]
+            owners[identity] = (owner, entry)
+        require("dynamics_study" in units, "separate dynamics study observations missing")
+        verify_dynamics_study(
+            root, units["dynamics_study"], config, source, checkpoints, owners, datasets
+        )
     learned_steps = sum(item["completed_steps"] for item in trajectories)
     require(
         learned_steps > 0 and report["completed_learned_steps"] == learned_steps,
