@@ -95,7 +95,11 @@ def verify_statistics(directory, saved, replay):
     momentum = (
         (raw["velocities"] - center_velocity[:, None, :]) * mass[None, :, None] * 1.66053906892e-22
     )
-    angular = np.cross((raw["positions"] - center[:, None, :]) * 1e-10, momentum).sum(1)
+    angular_terms = np.cross((raw["positions"] - center[:, None, :]) * 1e-10, momentum)
+    angular = angular_terms.sum(1)
+    angular_roundoff = float(
+        64 * len(mass) * np.finfo(float).eps * np.linalg.norm(angular_terms, axis=2).sum(1).max()
+    )
     agree(
         saved["maximum_center_of_mass_displacement_angstrom"],
         np.sqrt(((center - center[0]) ** 2).sum(1)).max(),
@@ -106,10 +110,21 @@ def verify_statistics(directory, saved, replay):
         np.isclose(
             saved["maximum_internal_angular_momentum_change_SI"],
             np.sqrt(((angular - angular[0]) ** 2).sum(1)).max(),
-            atol=1e-50,
+            atol=max(angular_roundoff, 1e-50),
             rtol=1e-8,
         ),
         "false angular momentum change",
+    )
+    require(
+        np.isclose(
+            saved["angular_momentum_roundoff_bound_SI"], angular_roundoff, atol=1e-50, rtol=1e-8
+        )
+        and saved["angular_change_above_roundoff"]
+        is (
+            saved["maximum_internal_angular_momentum_change_SI"]
+            > saved["angular_momentum_roundoff_bound_SI"]
+        ),
+        "angular momentum conditioning or resolution claim changed",
     )
     agree(
         saved["maximum_heat_adjusted_energy_drift_eV"],

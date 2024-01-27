@@ -87,6 +87,39 @@ def test_angular_momentum_check_uses_si_scale_tolerance(path_statistics):
         verify_statistics(directory, statistics, replay_trajectory(directory))
 
 
+def test_learned_momentum_cancellation_is_checked_at_retained_scale(model, geometry, tmp_path):
+    from asterion.contracts.units import thermal_velocities
+    from asterion.dynamics.learned import LearnedEvaluator
+
+    simulate(
+        LearnedEvaluator(model),
+        geometry.numbers,
+        geometry.positions,
+        thermal_velocities(geometry.numbers, 100, 491),
+        tmp_path / "learned",
+        SimulationConfig(steps=8),
+        lineage="original-untrained-model-fixture",
+    )
+    statistics = analyze_trajectory(tmp_path / "learned")
+    assert statistics["angular_momentum_roundoff_bound_SI"] > 0
+    assert statistics["angular_change_above_roundoff"] is False
+    verify_statistics(tmp_path / "learned", statistics, replay_trajectory(tmp_path / "learned"))
+
+
+def test_angular_momentum_roundoff_scale_cannot_be_removed(path_statistics):
+    directory, statistics = path_statistics
+    statistics["angular_momentum_roundoff_bound_SI"] = 0
+    with pytest.raises(IntegrityError, match="conditioning"):
+        verify_statistics(directory, statistics, replay_trajectory(directory))
+
+
+def test_angular_resolution_claim_requires_a_boolean(path_statistics):
+    directory, statistics = path_statistics
+    statistics["angular_change_above_roundoff"] = int(statistics["angular_change_above_roundoff"])
+    with pytest.raises(IntegrityError, match="conditioning"):
+        verify_statistics(directory, statistics, replay_trajectory(directory))
+
+
 def test_constant_temperature_path_does_not_invent_correlation_time():
     result = temperature_correlation(np.full(100, 300.0))
     assert result["available"] is False and result["integrated_time_steps"] is None

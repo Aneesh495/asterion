@@ -69,3 +69,9 @@ Constant and short series report this quantity unavailable. Center-of-mass displ
 internal angular momentum changes are derived from retained masses, coordinates and velocities.
 NVT drift subtracts the actual recorded thermostat heat. These checks cannot supply electronic
 structure truth along generated coordinates.
+
+Subtracting nearly conserved angular momentum is sensitive to cancellation. Reports retain a
+declared float64 roundoff scale: 64N times machine epsilon times the largest sum of individual
+atomic angular-momentum norms. The checker derives this scale independently. Changes below that
+scale are marked unresolved; a small printed residual does not establish precision beyond its
+retained input arithmetic.

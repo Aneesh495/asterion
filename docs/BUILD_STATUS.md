@@ -2,8 +2,9 @@
 
 Phase: learned thermostat/refinement integration and study analysis. Full delivery remains incomplete.
 
-The current source passes 606 collected tests, 419 authored test functions, Ruff and mypy.
-`runs/dynamics-validation-16/tests.xml` records the local invocation. The 400-authored-test gate
+The latest full suite passed 609 tests; 17 focused dynamics cases also passed after the boolean
+resolution-contract check. Current source has 422 authored test functions and passes Ruff/mypy.
+`runs/dynamics-validation-16b/tests.xml` records the full invocation. The 400-authored-test gate
 is met. The private implementation-depth gate remains unmet. No workload requirement was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
@@ -89,6 +90,14 @@ temperature time correlations, species-pair bond distributions, center-of-mass/a
 changes and heat-adjusted drift. Initial frames are excluded from structural samples. The checker
 reconstructs each report, source geometry, initial velocity and saved-weight trajectory, and
 rejects missing/shortened studies. CPU fixture tests pass; fresh learned-model integration is pending.
+
+`managed-integration-16` executed all four CLI stages and retained the learned NVT/refinement
+paths, but independent verification failed on angular-momentum cancellation. The source's
+subtractions differed by about 6.5e-49 kg m²/s on a retained momentum scale near 1.9e-33 kg m²/s.
+The failed invocation and original observations remain unchanged. The checker now derives a
+conditioning-aware float64 comparison scale and requires a boolean resolution claim. Genuine
+original-model tests cover cancellation and still reject an invented 1e-40 kg m²/s change.
+Fresh source-bound integration remains required.
 
 The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
 It displays unavailable energy/force, disables force overlays and shows the retained collision

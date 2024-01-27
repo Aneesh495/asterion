@@ -111,11 +111,18 @@ def analyze_trajectory(directory):
     centered = arrays["positions"] - center[:, None, :]
     velocity_center = np.sum(arrays["velocities"] * mass[None, :, None], axis=1) / mass.sum()
     internal_velocity = arrays["velocities"] - velocity_center[:, None, :]
-    angular = np.sum(
+    angular_terms = (
         np.cross(centered * 1e-10, internal_velocity * 1e5)
         * mass[None, :, None]
-        * 1.66053906892e-27,
-        axis=1,
+        * 1.66053906892e-27
+    )
+    angular = angular_terms.sum(axis=1)
+    angular_change = float(np.linalg.norm(angular - angular[0], axis=1).max())
+    angular_roundoff = float(
+        64
+        * len(mass)
+        * np.finfo(np.float64).eps
+        * np.linalg.norm(angular_terms, axis=2).sum(axis=1).max()
     )
     temperature = arrays["temperature"][1:]
     result.update(
@@ -129,9 +136,9 @@ def analyze_trajectory(directory):
         maximum_center_of_mass_displacement_angstrom=float(
             np.linalg.norm(center - center[0], axis=1).max()
         ),
-        maximum_internal_angular_momentum_change_SI=float(
-            np.linalg.norm(angular - angular[0], axis=1).max()
-        ),
+        maximum_internal_angular_momentum_change_SI=angular_change,
+        angular_momentum_roundoff_bound_SI=angular_roundoff,
+        angular_change_above_roundoff=angular_change > angular_roundoff,
         angular_momentum_unit="kg m^2/s",
         maximum_heat_adjusted_energy_drift_eV=replay["max_energy_drift_eV"],
         bond_reference_radius_angstrom=metadata["detector"]["policy"]["bond_reference_radius"],
