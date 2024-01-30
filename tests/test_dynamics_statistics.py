@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from asterion.artifacts.dynamics_study import verify_statistics
+from asterion.artifacts.io import atomic_npz, file_hash, read_json, write_json
 from asterion.contracts.errors import ContractError, IntegrityError
 from asterion.dynamics.analytic import HarmonicBond
 from asterion.dynamics.integrator import SimulationConfig, simulate
@@ -118,6 +119,83 @@ def test_angular_resolution_claim_requires_a_boolean(path_statistics):
     statistics["angular_change_above_roundoff"] = int(statistics["angular_change_above_roundoff"])
     with pytest.raises(IntegrityError, match="conditioning"):
         verify_statistics(directory, statistics, replay_trajectory(directory))
+
+
+def test_valid_integration_prefix_cannot_claim_completed_nvt_workload(path_statistics):
+    directory, _ = path_statistics
+    with np.load(directory / "trajectory.npz", allow_pickle=False) as raw:
+        arrays = {
+            key: raw[key].copy() if key == "numbers" else raw[key][:-1].copy() for key in raw.files
+        }
+    atomic_npz(directory / "trajectory.npz", **arrays)
+    metadata = read_json(directory / "trajectory.json")
+    metadata["trajectory_sha256"] = file_hash(directory / "trajectory.npz")
+    metadata["completed_steps"] -= 1
+    metadata["physical_horizon_fs"] = (
+        metadata["completed_steps"] * metadata["config"]["timestep_fs"]
+    )
+    write_json(directory / "trajectory.json", metadata)
+    with pytest.raises(IntegrityError, match="has not completed"):
+        replay_trajectory(directory)
+
+
+def test_nvt_replay_binds_noise_to_the_declared_seed(path_statistics):
+    directory, _ = path_statistics
+    record = read_json(directory / "trajectory.json")
+    record["config"]["seed"] += 1
+    write_json(directory / "trajectory.json", record)
+    with pytest.raises(IntegrityError, match="seeded Gaussian stream"):
+        replay_trajectory(directory)
+
+
+def test_valid_frames_cannot_relax_their_force_domain_after_execution(path_statistics):
+    directory, _ = path_statistics
+    record = read_json(directory / "trajectory.json")
+    record["detector"]["policy"]["maximum_force"] = 1e-12
+    write_json(directory / "trajectory.json", record)
+    with pytest.raises(IntegrityError, match="force or uncertainty policy"):
+        replay_trajectory(directory)
+
+
+def test_json_exponent_overflow_cannot_disable_a_validity_limit(path_statistics):
+    directory, _ = path_statistics
+    path = directory / "trajectory.json"
+    path.write_text(path.read_text().replace('"maximum_force":100.0', '"maximum_force":1e309'))
+    with pytest.raises(IntegrityError, match="nonfinite or nonpositive"):
+        replay_trajectory(directory)
+
+
+def test_json_exponent_overflow_cannot_hide_nonfinite_thermostat_arithmetic(path_statistics):
+    directory, _ = path_statistics
+    path = directory / "trajectory.json"
+    record = read_json(path)
+    record["config"]["temperature_K"] = 1
+    write_json(path, record)
+    path.write_text(path.read_text().replace('"temperature_K":1,', '"temperature_K":1e309,'))
+    with pytest.raises(IntegrityError, match="stochastic configuration"):
+        replay_trajectory(directory)
+
+
+def test_failed_initial_candidate_is_bound_to_actual_retained_positions(tmp_path):
+    from asterion.dynamics.analytic import ForceResult
+
+    numbers = np.array([6, 6])
+    positions = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+    directory = tmp_path / "failed"
+    simulate(
+        lambda p, n: ForceResult(0.0, np.full_like(p, 1000)),
+        numbers,
+        positions,
+        np.zeros_like(positions),
+        directory,
+        SimulationConfig(steps=8),
+    )
+    atomic_npz(directory / "failure.npz", positions=positions + 1)
+    metadata = read_json(directory / "trajectory.json")
+    metadata["failure_sha256"] = file_hash(directory / "failure.npz")
+    write_json(directory / "trajectory.json", metadata)
+    with pytest.raises(IntegrityError, match="not produced by"):
+        replay_trajectory(directory)
 
 
 def test_constant_temperature_path_does_not_invent_correlation_time():

@@ -2,10 +2,10 @@
 
 Phase: learned thermostat/refinement integration and study analysis. Full delivery remains incomplete.
 
-The latest full suite passed 609 tests; 17 focused dynamics cases also passed after the boolean
-resolution-contract check. Current source has 422 authored test functions and passes Ruff/mypy.
-`runs/dynamics-validation-16b/tests.xml` records the full invocation. The 400-authored-test gate
-is met. The private implementation-depth gate remains unmet. No workload requirement was lowered.
+The current source passes 616 tests, covering 428 authored test functions, and Ruff/mypy.
+`runs/replay-validation-17/tests.xml` records the full invocation. The 400-authored-test gate
+is met. Private implementation accounting remains outside the repository. No workload requirement
+was lowered.
 
 The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
 CPU compatibility run completed training, export and eight-geometry evaluation with the declared
@@ -98,6 +98,18 @@ The failed invocation and original observations remain unchanged. The checker no
 conditioning-aware float64 comparison scale and requires a boolean resolution claim. Genuine
 original-model tests cover cancellation and still reject an invented 1e-40 kg m²/s change.
 Fresh source-bound integration remains required.
+
+`managed-integration-16b` independently verified the corrected studies and all four managed CLI
+stages at execution commit e68a71f. Its digest is
+`86e00ab28a3758c3de676d6252b4f1114708d970873ddedd3033d859904ccf0d`.
+The raw NVT and refinement paths total 32 additional steps; the primary path has eight. These
+short observations exercise source/geometry/velocity/weight/report wiring. They do not establish
+equilibration, useful molecular learning or full acceptance.
+
+Replay now checks completion status against actual requested work, finite stochastic/policy
+configuration, all Cartesian/observation axes, bounded array bodies, seeded NVT noise, per-frame
+geometry/force validity and the integrator's failed candidate. Exponent-overflow JSON cannot
+disable limits or conceal nonfinite arithmetic. A valid trajectory prefix cannot claim completion.
 
 The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
 It displays unavailable energy/force, disables force overlays and shows the retained collision
