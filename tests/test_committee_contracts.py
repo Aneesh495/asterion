@@ -1,5 +1,5 @@
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, replace
 
 import numpy as np
 import pytest
@@ -139,6 +139,52 @@ def test_committee_rejects_precision_change_after_loading(trained):
     changed = deepcopy(models[0]).float()
     with pytest.raises(IntegrityError, match="weights changed"):
         Committee([changed, *models[1:]], identities, [1, 2, 3])
+
+
+def test_committee_rejects_energy_rescaling_after_checkpoint_loading(trained):
+    models, identities, *_ = trained
+    changed = deepcopy(models[0])
+    changed.config = replace(changed.config, energy_scale=changed.config.energy_scale * 2)
+    with pytest.raises(IntegrityError, match="physical configuration changed"):
+        Committee([changed, *models[1:]], identities, [1, 2, 3])
+
+
+def test_committee_rejects_collective_label_level_relabelling(trained):
+    models, identities, *_ = trained
+    changed = [deepcopy(model) for model in models]
+    for model in changed:
+        model.config = replace(model.config, level="PBE+MBD")
+    with pytest.raises(IntegrityError, match="physical configuration changed"):
+        Committee(changed, identities, [1, 2, 3])
+
+
+def test_committee_rejects_energy_offset_change_during_lifetime(trained):
+    models, identities, _, oracle, split = trained
+    private = [deepcopy(model) for model in models]
+    result = Committee(private, identities, [1, 2, 3])
+    private[0].config = replace(
+        private[0].config, energy_offset=private[0].config.energy_offset + 1
+    )
+    with pytest.raises(IntegrityError, match="physical configuration changed"):
+        result.infer([oracle.pool.geometry(row) for row in split.evaluation])
+
+
+def test_committee_detects_configuration_change_during_forward_call(trained, monkeypatch):
+    models, identities, _, oracle, split = trained
+    private = [deepcopy(model) for model in models]
+    result = Committee(private, identities, [1, 2, 3])
+    original = private[0].forward
+
+    def mutate_after_call(*args, **kwargs):
+        observed = original(*args, **kwargs)
+        private[0].config = replace(
+            private[0].config, energy_offset=private[0].config.energy_offset + 1
+        )
+        return observed
+
+    monkeypatch.setattr(private[0], "forward", mutate_after_call)
+    with pytest.raises(IntegrityError, match="physical configuration changed during inference"):
+        result.infer([oracle.pool.geometry(row) for row in split.evaluation])
 
 
 def test_committee_rejects_inference_on_changed_member_lifetime(trained):

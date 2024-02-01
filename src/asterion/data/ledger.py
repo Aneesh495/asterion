@@ -4,7 +4,8 @@ from pathlib import Path
 import numpy as np
 
 from asterion.artifacts.io import object_hash, read_json, write_json
-from asterion.contracts.errors import IntegrityError, LabelAccessError
+from asterion.contracts.errors import ContractError, IntegrityError, LabelAccessError
+from asterion.data.indices import checked_rows
 from asterion.data.splits import Split
 
 
@@ -25,7 +26,13 @@ class RevealLedger:
                 raise IntegrityError("reveal ledger hash chain broken")
             if value["split"] != split.digest or value["round"] != len(self.rounds):
                 raise IntegrityError("reveal ledger lineage mismatch")
-            rows = set(value["rows"])
+            try:
+                supplied = checked_rows(value["rows"])
+            except ContractError as error:
+                raise LabelAccessError(str(error)) from error
+            rows = set(supplied)
+            if len(rows) != len(supplied):
+                raise LabelAccessError("persisted reveal repeats a geometry identity")
             if not rows or rows & seen or not rows <= set(split.train_pool):
                 raise LabelAccessError("invalid label reveal in persisted ledger")
             if value["total"] != len(seen | rows):
@@ -44,7 +51,10 @@ class RevealLedger:
         return self.rounds[-1]["digest"] if self.rounds else "genesis"
 
     def reveal(self, rows, policy: str, model_hashes=(), score_hash: str = "initial"):
-        rows = list(map(int, rows))
+        try:
+            rows = checked_rows(rows)
+        except ContractError as error:
+            raise LabelAccessError(str(error)) from error
         if not rows or len(rows) != len(set(rows)) or set(rows) & set(self.revealed):
             raise LabelAccessError("each geometry must be revealed exactly once")
         if not set(rows) <= set(self.split.train_pool) or len(self.revealed) + len(rows) > 1000:

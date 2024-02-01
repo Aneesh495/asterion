@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
+from asterion.artifacts.io import object_hash
 from asterion.contracts.errors import ContractError, IntegrityError
 from asterion.training.identity import state_fingerprint
 from asterion.uncertainty.moments import conformal_parameters, member_statistics
@@ -35,6 +36,7 @@ class Committee:
         if len({id(model) for model in models}) != 3:
             raise IntegrityError("committee members alias the same model")
         self.states = []
+        self.configurations = []
         self.forbidden_identities: set[str] = set()
         permitted = None
         task = (
@@ -63,7 +65,13 @@ class Committee:
             current = state_fingerprint(model)
             if current != provenance["execution_state"]:
                 raise IntegrityError("committee weights changed after checkpoint loading")
+            configuration = object_hash(model.config.to_dict())
+            if configuration != provenance.get("execution_configuration"):
+                raise IntegrityError(
+                    "committee physical configuration changed after checkpoint loading"
+                )
             self.states.append(current)
+            self.configurations.append(configuration)
             boundary = provenance["boundary"]
             if boundary is None:
                 raise IntegrityError("committee has no retained label-role boundary")
@@ -98,6 +106,11 @@ class Committee:
             for model, state in zip(self.models, self.states, strict=True)
         ):
             raise IntegrityError("committee weights changed during its lifetime")
+        if any(
+            object_hash(model.config.to_dict()) != configuration
+            for model, configuration in zip(self.models, self.configurations, strict=True)
+        ):
+            raise IntegrityError("committee physical configuration changed during its lifetime")
 
         energies, forces = [], []
         for model in self.models:
@@ -124,6 +137,11 @@ class Committee:
             for model, state in zip(self.models, self.states, strict=True)
         ):
             raise IntegrityError("committee weights changed during inference")
+        if any(
+            object_hash(model.config.to_dict()) != configuration
+            for model, configuration in zip(self.models, self.configurations, strict=True)
+        ):
+            raise IntegrityError("committee physical configuration changed during inference")
         energy_mean, force_mean, energy_std, force_std, scores = member_statistics(
             energy_stack, force_stack, [len(g.numbers) for g in geometries]
         )

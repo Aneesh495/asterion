@@ -8,6 +8,7 @@ from asterion.contracts.errors import ContractError, LabelAccessError
 from asterion.contracts.geometry import Chemistry, Geometry, Label
 from asterion.contracts.units import convert_labels
 from asterion.data.archive import dataset_arrays, dataset_size, validate_native_arrays
+from asterion.data.indices import checked_rows
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,8 @@ class CoordinatePool:
         return len(self.positions)
 
     def geometry(self, row: int) -> Geometry:
+        if isinstance(row, (bool, np.bool_)) or not isinstance(row, (int, np.integer)):
+            raise ContractError("geometry row requires an integer identity")
         if row < 0 or row >= len(self):
             raise ContractError("geometry row outside dataset")
         return Geometry(
@@ -46,10 +49,14 @@ class LabelOracle:
         self.__forces = forces
 
     def labels(self, rows, allowed, role: str) -> list[Label]:
-        rows = [int(row) for row in rows]
         if role not in {"train", "validation", "calibration", "evaluation"}:
             raise LabelAccessError("explicit label access role required")
-        if len(rows) != len(set(rows)) or not set(rows) <= set(map(int, allowed)):
+        try:
+            rows = checked_rows(rows, len(self.pool))
+            allowed = checked_rows(allowed, len(self.pool))
+        except ContractError as error:
+            raise LabelAccessError(str(error)) from error
+        if len(rows) != len(set(rows)) or not set(rows) <= set(allowed):
             raise LabelAccessError("duplicate or unrevealed label access")
         return [
             Label(

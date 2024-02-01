@@ -46,6 +46,11 @@ fingerprints. Precision conversion or weight updates after loading invalidate th
 Inference checks the fingerprints before and after evaluation. Member list ownership is captured
 so a caller cannot remove a member by changing the original list.
 
+The loaded model's physical configuration is bound separately. Changing an energy scale, offset,
+cutoff or label level after checkpoint loading cannot keep the old committee identity merely
+because tensor values are unchanged. Configuration hashes are checked at construction and before
+and after every inference call.
+
 Retained training and validation identities are automatically excluded from calibration. Allowed
 calibration identities are the intersection of the three saved calibration roles. A caller cannot
 admit final evaluation labels by omitting a forbidden-row argument. Geometry identities must be

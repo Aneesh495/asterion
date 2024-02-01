@@ -135,6 +135,7 @@ def load_checkpoint(path: Path, device="cpu", dtype=torch.float64):
     model._asterion_provenance = {
         "checkpoint": record,
         "execution_state": state_fingerprint(model),
+        "execution_configuration": object_hash(model.config.to_dict()),
         "boundary": boundary,
     }
     return model, record

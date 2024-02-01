@@ -9,6 +9,11 @@ label axes and finite values are validated, and hashes are checked across loadin
 coordinate arrays are immutable. The binary contract follows the
 [NumPy format specification](https://numpy.org/doc/2.2/reference/generated/numpy.lib.format.html).
 
+Geometry rows and label/reveal selections require integer identities. Boolean masks, numeric
+strings and fractions are rejected before conversion. Native NumPy integer vectors remain valid.
+Persisted reveal chains check the same types and reject duplicate rows even when their hash
+chain has been recomputed.
+
 rMD17 release v4 is pinned by the author metadata in `configs/rmd17-release-v4.json`. The required
 individual files are aspirin, ethanol, malonaldehyde and salicylic. Each has 100,000 geometries.
 The released name for salicylic acid is `rmd17_salicylic.npz`. Author MD5 and local SHA256 identities

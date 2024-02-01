@@ -2,8 +2,8 @@
 
 Phase: learned thermostat/refinement integration and study analysis. Full delivery remains incomplete.
 
-The current source passes 616 tests, covering 428 authored test functions, and Ruff/mypy.
-`runs/replay-validation-17/tests.xml` records the full invocation. The 400-authored-test gate
+The current source passes 628 tests, covering 440 authored test functions, and Ruff/mypy.
+`runs/contracts-validation-18/tests.xml` records the full invocation. The 400-authored-test gate
 is met. Private implementation accounting remains outside the repository. No workload requirement
 was lowered.
 
@@ -110,6 +110,19 @@ Replay now checks completion status against actual requested work, finite stocha
 configuration, all Cartesian/observation axes, bounded array bodies, seeded NVT noise, per-frame
 geometry/force validity and the integrator's failed candidate. Exponent-overflow JSON cannot
 disable limits or conceal nonfinite arithmetic. A valid trajectory prefix cannot claim completion.
+
+`managed-integration-17` verified the strict replay source at execution commit e5d7d56 and digest
+`9959885a3e58b229c6539239aab694d93137dcac5c9115fb6d890aac5317f84a`.
+All 16 standard corruption controls rejected. Five additional rehashed study controls rejected
+missing NVT cases, invented bond counts, false heat-adjusted drift, false temperature correlation
+and an incomplete path presented as passed. Positive checks passed before and after both sets,
+and the original bundle remained unchanged.
+
+Checkpoint loading now captures physical configuration separately from parameter fingerprints.
+Committee construction and both inference boundaries reject changes to scale, offset or label
+level after loading. Dataset lookup, label access and reveal records also reject boolean, string
+and fractional row identities before integer conversion; rehashed persisted duplicates cannot
+inflate a reveal. These new contracts require fresh integrated acquisition execution.
 
 The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
 It displays unavailable energy/force, disables force overlays and shows the retained collision
