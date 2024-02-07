@@ -36,6 +36,21 @@ roles. A Python interface enforces ordinary call access but is not an adversaria
 lineage connects split digest, reveal digest, member weights and calibration identities. Full
 analysis must compare matched final evaluation units, training cost, diversity and failure rate.
 
+Each round records monotonic clock observations for member training, selection/reveal, calibration
+and committee evaluation, and candidate inference. Overall round time includes checkpoint and
+prediction writes and per-member evaluation. Shared descriptor preprocessing and the initial
+reveal precede this interval; cost-summary and final-pairing publication follow it. Those exclusions
+are explicit. Optimizer counts, processed examples and epoch durations are reconstructed from
+retained histories. This is measured finite-pool work, not a measured electronic-structure oracle
+cost or isolated hardware throughput claim.
+
+Selected-geometry diversity uses species-pair coordinate descriptors standardized over the
+permitted candidate pool. Reports retain mean nearest and mean pairwise descriptor distance,
+with source coordinate reconstruction. Final policy comparisons use identical evaluation
+identities and geometry-weighted errors. The paired temporal-block bootstrap has span 1000,
+2000 draws and seed 491; a single block reports the interval unavailable. A negative or
+inconclusive acquisition result remains a result.
+
 The tiny integration experiment's error correlations are low and its bounds wide. It did not
 establish useful acquisition or shift-calibrated uncertainty. See [retained findings](FINDINGS.md).
 The original full 100/300/1000-label, three-policy, three-seed, two-molecule experiment is pending.

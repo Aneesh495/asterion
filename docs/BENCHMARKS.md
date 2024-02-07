@@ -65,3 +65,10 @@ Full research measurements still need a device memory/resource pilot, long-horiz
 matched reference physical horizons and accuracy, accelerator transfer costs, acquisition total cost and
 matched reference accuracy. Energy-only inference cannot be compared to energy-plus-force costs.
 No 72-hour full campaign completion estimate has been measured.
+
+Acquisition cost reports are separate from microbenchmarks. They count all three trained members
+per round and retain actual optimizer/example totals, epoch durations and call clock intervals.
+Candidate inference and calibration/evaluation timing are included in round observations.
+Shared preparation and final summary writes are declared exclusions. Read-only checking binds
+these records to histories and author-coordinate diversity. Actual paired policy outcomes are
+recomputed from held-out errors; timing does not imply better label efficiency.

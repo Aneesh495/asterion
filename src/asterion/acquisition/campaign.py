@@ -1,8 +1,15 @@
+import time
 from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
 
+from asterion.acquisition.analysis import (
+    interval,
+    paired_policy_outcomes,
+    round_cost,
+    selected_diversity,
+)
 from asterion.acquisition.policy import choose
 from asterion.artifacts.io import atomic_npz, object_hash, write_json
 from asterion.data.dataset import load_rmd17
@@ -17,8 +24,10 @@ from asterion.uncertainty.committee import Committee
 
 def acquisition_campaign(config, storage: Path, directory: Path):
     outcomes = []
+    pools = {}
     for molecule in config["acquisition_molecules"]:
         pool, oracle = load_rmd17(storage / "rmd17" / f"rmd17_{molecule}.npz", molecule)
+        pools[molecule] = pool
         for trial in config["seeds"]:
             split = author_split(
                 pool,
@@ -38,7 +47,11 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                 committee = None
                 disagreement = None
                 for round_index, budget in enumerate(budgets):
+                    round_started = time.perf_counter_ns()
+                    decision = None
+                    training_calls = []
                     if round_index:
+                        decision_started = time.perf_counter_ns()
                         if committee is None or disagreement is None:
                             raise RuntimeError("acquisition round lacks prior trained committee")
                         choices = choose(
@@ -62,6 +75,7 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         ledger.reveal(
                             choices.rows, policy, committee.identities, object_hash(candidate)
                         )
+                        decision = interval(decision_started, time.perf_counter_ns())
                     models = []
                     identities = []
                     metrics = []
@@ -74,6 +88,7 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                             batch_size=config["batch_size"],
                             **config["training"],
                         )
+                        training_started = time.perf_counter_ns()
                         result = train(
                             oracle,
                             split,
@@ -82,6 +97,7 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                             training,
                             ledger=ledger,
                         )
+                        training_calls.append(interval(training_started, time.perf_counter_ns()))
                         model, checkpoint = load_checkpoint(Path(result["checkpoint"]))
                         models.append(model)
                         identities.append(checkpoint["identity"])
@@ -92,6 +108,7 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         [trial * 100 + i for i in (1, 2, 3)],
                         forbidden_rows=set(ledger.revealed) | set(split.validation),
                     )
+                    calibration_started = time.perf_counter_ns()
                     calibration_labels = oracle.labels(
                         split.calibration, split.calibration, "calibration"
                     )
@@ -140,7 +157,10 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         component_std=output.force_component_std,
                         pointers=pointers,
                     )
+                    calibration_evaluation = interval(calibration_started, time.perf_counter_ns())
+                    candidate_started = time.perf_counter_ns()
                     disagreement = committee.infer([pool.geometry(row) for row in split.train_pool])
+                    candidate_inference = interval(candidate_started, time.perf_counter_ns())
                     atomic_npz(
                         run / f"candidate-pool-{round_index}.npz",
                         identities=disagreement.identities,
@@ -150,6 +170,16 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         numbers=np.tile(pool.numbers, len(split.train_pool)),
                         pointers=np.arange(len(split.train_pool) + 1) * len(pool.numbers),
                         scores=disagreement.force_score,
+                    )
+                    diversity = selected_diversity(descriptors, split.train_pool, ledger.revealed)
+                    cost = round_cost(
+                        run,
+                        round_index,
+                        interval(round_started, time.perf_counter_ns()),
+                        training_calls,
+                        decision,
+                        calibration_evaluation,
+                        candidate_inference,
                     )
                     outcomes.append(
                         {
@@ -161,6 +191,8 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                             "reveal": ledger.digest,
                             "metrics": metrics,
                             "uncertainty": uncertainty,
+                            "cost": cost,
+                            "selected_diversity": diversity,
                             "completed_labels": len(ledger.revealed),
                             "path": str(run.relative_to(directory)),
                             "members": [
@@ -169,4 +201,5 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         }
                     )
                     write_json(directory / "acquisition-units.json", outcomes)
+    paired_policy_outcomes(directory, outcomes, pools)
     return outcomes

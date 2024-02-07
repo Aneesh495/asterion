@@ -2,8 +2,8 @@
 
 Phase: learned thermostat/refinement integration and study analysis. Full delivery remains incomplete.
 
-The current source passes 628 tests, covering 440 authored test functions, and Ruff/mypy.
-`runs/contracts-validation-18/tests.xml` records the full invocation. The 400-authored-test gate
+The current source passes 639 tests, covering 451 authored test functions, and Ruff/mypy.
+`runs/acquisition-validation-19/tests.xml` records the full invocation. The 400-authored-test gate
 is met. Private implementation accounting remains outside the repository. No workload requirement
 was lowered.
 
@@ -123,6 +123,13 @@ Committee construction and both inference boundaries reject changes to scale, of
 level after loading. Dataset lookup, label access and reveal records also reject boolean, string
 and fractional row identities before integer conversion; rehashed persisted duplicates cannot
 inflate a reveal. These new contracts require fresh integrated acquisition execution.
+
+Acquisition now records actual round/member/decision/inference clock intervals, optimizer updates,
+processed examples and epoch work. Costs explicitly exclude shared preprocessing, initial reveal
+and final summary publication. Coordinate-only selected diversity uses bounded blocks. Paired
+policy outcomes retain the same evaluation units and independently checked temporal-block
+intervals against uniform selection. This new path still needs fresh integrated execution;
+no acquisition advantage or full cost estimate is claimed.
 
 The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
 It displays unavailable energy/force, disables force overlays and shows the retained collision

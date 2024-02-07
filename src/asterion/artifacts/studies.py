@@ -208,6 +208,12 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
     base = report_file.parent
     outcomes = read_json(report_file)
     initial: dict[tuple[str, int], list[int]] = {}
+    from asterion.artifacts.acquisition_analysis import (
+        verify_cost,
+        verify_diversity,
+        verify_paired_policies,
+    )
+
     for row in outcomes:
         directory = safe_member(root, str((base / row["path"]).relative_to(root)))
         require(
@@ -302,6 +308,15 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
             member_rows[0] == member_rows[1] == member_rows[2],
             "committee did not train on identical revealed rows",
         )
+        verify_cost(directory, row)
+        with np.load(datasets[f"rmd17_{row['molecule']}.npz"], allow_pickle=False) as author:
+            verify_diversity(
+                row["selected_diversity"],
+                author["coords"][split["train_pool"]],
+                author["nuclear_charges"],
+                split["train_pool"],
+                member_rows[0],
+            )
         mean, std, scores, errors = committee_arrays(evaluation)
         saved = read_arrays(directory / f"uncertainty-evaluation-{row['round']}.npz")
         require(
@@ -472,4 +487,5 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
                 and np.allclose(novelty, candidate["choices"]["novelty"], atol=1e-10, rtol=1e-9),
                 "independent acquisition decision reconstruction failed",
             )
+    verify_paired_policies(base, outcomes, datasets)
     return {"outcomes": len(outcomes), "shared_initial_pools": len(initial)}
