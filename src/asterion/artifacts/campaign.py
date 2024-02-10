@@ -432,6 +432,7 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
             ("tests.xml",),
         ),
         Stage("data", command("data"), (), 3600, "resume"),
+        Stage("pilot", command("pilot"), ("pilot",), 3600, "restart", ("pilot",)),
         Stage("train", command("train"), training_outputs, continuation="resume"),
         Stage("evaluate", command("evaluate"), evaluation_outputs, continuation="resume"),
         Stage(

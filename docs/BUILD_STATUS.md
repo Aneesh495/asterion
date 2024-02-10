@@ -2,8 +2,8 @@
 
 Phase: learned thermostat/refinement integration and study analysis. Full delivery remains incomplete.
 
-The current source passes 639 tests, covering 451 authored test functions, and Ruff/mypy.
-`runs/acquisition-validation-19/tests.xml` records the full invocation. The 400-authored-test gate
+The current source passes 648 tests, covering 460 authored test functions, and Ruff/mypy.
+`runs/pilot-validation-20/tests.xml` records the full invocation. The 400-authored-test gate
 is met. Private implementation accounting remains outside the repository. No workload requirement
 was lowered.
 
@@ -130,6 +130,22 @@ and final summary publication. Coordinate-only selected diversity uses bounded b
 policy outcomes retain the same evaluation units and independently checked temporal-block
 intervals against uniform selection. This new path still needs fresh integrated execution;
 no acquisition advantage or full cost estimate is claimed.
+
+`acquisition-integration-19` completed and independently verified all nine policy/budget rounds,
+27 genuinely trained members, 126 optimizer updates and 1008 processed training examples.
+Measured round intervals total 61.7011 seconds on the shared CPU host, with declared exclusions.
+Member histories, coordinate diversity and all six paired policy comparisons replayed. Its
+execution commit is b17d48c and digest
+`e7ec04af2862c458e0c87374ea5434871c1cf9712443d18d5b9c6a7713b5626e`.
+Two epochs and 8/16/32 labels do not establish useful acquisition or uncertainty ranking.
+
+Full execution now runs a retained original-model resource pilot immediately after data and
+before training. Primary and MD22 coordinates exercise both architectures at batch sizes one
+and eight, with at least three forward/force-loss repetitions. Untrained safetensor states,
+actual outputs/parameter gradients, clocks and peak memory are checked independently. The
+objective is quadratic current predictions; no supervised fitting or accuracy result is claimed.
+Full campaign hours remain unavailable because reference, validation and I/O costs are not
+projected. This is now a required stage/family in full receipts and verification.
 
 The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
 It displays unavailable energy/force, disables force overlays and shows the retained collision

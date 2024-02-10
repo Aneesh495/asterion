@@ -1,4 +1,5 @@
 import hashlib
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -133,7 +134,7 @@ class Batch:
         return self
 
 
-def collate(items: list[Geometry | Label], dtype=torch.float64, device="cpu") -> Batch:
+def collate(items: Sequence[Geometry | Label], dtype=torch.float64, device="cpu") -> Batch:
     if not items:
         raise ContractError("cannot collate empty input")
     labeled = isinstance(items[0], Label)

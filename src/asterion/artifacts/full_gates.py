@@ -25,6 +25,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     names = (
         "tests",
         "data",
+        "pilot",
         "train",
         "evaluate",
         "guarded-shift",
@@ -45,6 +46,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     verify_command_receipts(root, commands, finals)
     required = {
         "junit",
+        "resource_pilot",
         "properties",
         "derivatives",
         "analytic",
@@ -142,6 +144,15 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         record["name"]: Path(record["path"])
         for record in read_json(root / "DATASETS.json")["files"]
     }
+    from asterion.artifacts.resource_pilot import verify_resource_pilot
+
+    counts["resource_pilot"] = verify_resource_pilot(
+        root,
+        index["resource_pilot"],
+        config,
+        read_json(root / "SOURCE_INPUTS.json"),
+        derivative_data,
+    )
     verify_derivative_campaign(
         root, index["derivatives"], read_json(root / "SOURCE_INPUTS.json"), models, derivative_data
     )

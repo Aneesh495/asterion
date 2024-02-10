@@ -1,5 +1,18 @@
 # Benchmark methodology
 
+`make pilot CONFIG=configs/full.json` measures the frozen architecture before research training.
+The full coordinator acquires primary and secondary data, then pilots each system and both
+original architectures at batch sizes one and eight. Three repetitions retain actual energy/force
+and double-backward work, raw clocks, process high water and accelerator allocated-byte peaks.
+Random initialized states are retained for independent output/gradient replay. No optimizer step
+or supervised label access is performed. The quadratic current-output objective is a derivative
+mechanism workload, not an estimate of real normalized training accuracy.
+
+Pilot verification checks the exact source, model architecture, author coordinates, backend,
+precision, sample matrix and saved-state outputs. CPU memory is not accelerator memory. A CPU
+pilot using full model dimensions remains a CPU observation. No 72-hour campaign forecast is
+inferred from these kernels: validation, reference retraining, preparation and I/O remain separate.
+
 Current `make bench` loads the selected original checkpoint at the configured training precision
 and device. Runtime format v2 retains all 740 samples: 30 repetitions of six modes at batch sizes
 1, 2, 4 and 8, ten 100-call inference repetitions and ten 100-step learned-force dynamics starts.

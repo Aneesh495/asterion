@@ -33,6 +33,7 @@ COMMANDS = (
     "doctor",
     "build",
     "data",
+    "pilot",
     "train",
     "evaluate",
     "sample-efficiency",
@@ -222,7 +223,12 @@ def dispatch(args):
     if args.command == "doctor":
         return doctor(config, storage)
     if args.command == "data":
-        return acquire_rmd17(root / "configs/rmd17-release-v4.json", storage)
+        primary = acquire_rmd17(root / "configs/rmd17-release-v4.json", storage)
+        if "secondary" in config:
+            from asterion.data.secondary import acquire_md22
+
+            acquire_md22(root / "configs/md22-release.json", storage)
+        return primary
     if args.command == "build":
         subprocess.run(["uv", "build", "--offline"], cwd=root, check=True)
         return {"status": "passed", "directory": str(root / "dist")}
@@ -239,6 +245,10 @@ def dispatch(args):
         subprocess.run(["uv", "build", "--offline"], cwd=root, check=True)
         return {"status": "passed", "source": source_inputs()["digest"]}
     journal = CommandJournal(runs / "COMMANDS.jsonl")
+    if args.command == "pilot":
+        from asterion.evaluation.resource_pilot import resource_pilot
+
+        return journal.execute("pilot", lambda: resource_pilot(config, storage, runs / "pilot"))
     if args.command in {"train", "sample-efficiency"}:
         return journal.execute("train", lambda: train_campaign(config, storage, runs, args.resume))
     if args.command == "evaluate":

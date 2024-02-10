@@ -94,6 +94,7 @@ def retain_stage_receipts(runs: Path, evidence: Path):
     mapping = {}
     prefixes = {
         "guarded-shift",
+        "pilot",
         "acquisition",
         "ablations",
         "reference",
@@ -147,6 +148,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
     """Copy all mandatory raw families without claiming they passed verification."""
     report = build_diagnostic(config, storage, runs, evidence)
     families = {
+        "resource_pilot": "pilot",
         "properties": "properties.json",
         "derivatives": "derivatives",
         "analytic": "analytic",
@@ -163,6 +165,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "benchmark_dynamics": "benchmark-dynamics",
     }
     endpoints = {
+        "resource_pilot": "pilot.json",
         "derivatives": "derivatives.json",
         "analytic": "analytic.json",
         "simulation_recovery": "recovery.json",

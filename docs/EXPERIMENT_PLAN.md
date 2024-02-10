@@ -47,6 +47,11 @@ trials, 1000 force checks, 100 Hessian checks, 100 analytic fixtures at three ti
 50 recovery cases, 100 failure cases, a 30-minute memory stress and real verifier controls.
 `make acceptance` never replaces these with the diagnostic profile.
 
+The complete stage plan now places the original resource pilot after data and before training.
+It retains untrained model states and probes actual graph/coordinate-gradient/double-backward
+mechanisms at the frozen precision and device. Failure is preserved and blocks subsequent
+training. Full verification requires this pilot alongside the later selected-model timing study.
+
 Paired learning uncertainty uses original temporal index blocks of span 1000, with 2000
 block-bootstrap repetitions and seed 491. The point estimate remains geometry weighted;
 resampled block totals divide by resampled geometry counts. Positive lower bounds are required

@@ -197,6 +197,7 @@ def test_full_stage_plan_preserves_all_required_families(tmp_path):
     assert [x.name for x in stages] == [
         "tests",
         "data",
+        "pilot",
         "train",
         "evaluate",
         "guarded-shift",
