@@ -28,14 +28,14 @@ the requested execution or decisive evidence is missing. Test IDs refer to actua
 | M20 | Budgeted active acquisition | `acquisition/campaign.py`, `acquisition/policy.py` | Exact 8/16/32-label integration ledgers | diagnostic passed; required budgets/population unverified |
 | M21 | Uniform/diversity controls | `acquisition/policy.py` | Same initial rows across three policies | diagnostic passed |
 | M22 | Original Verlet | `dynamics/integrator.py` | Analytic checks and learned trajectory SI replay | diagnostic passed |
-| M23 | NVE/NVT accounting | `dynamics/integrator.py` | Analytic NVT heat/noise and CPU recovery checks | diagnostic passed; learned NVT study unverified |
+| M23 | NVE/NVT accounting | `dynamics/integrator.py`, `training/dynamics_study.py` | Source-bound learned NVT/refinement paths, heat/noise and independent structural reports | diagnostic passed; full learned study unverified |
 | M24 | Independent dynamics references | `evaluation/analytic_campaign.py` | 110 oscillator/LJ fixtures | diagnostic passed |
 | M25 | Timestep refinement | `evaluation/analytic_campaign.py` | Three timesteps at equal physical horizon | diagnostic passed |
 | M26 | Failure detectors | `dynamics/detectors.py` | Real extreme-force intervention and invalid cases | diagnostic passed |
 | M27 | Independent physical replay | `evaluation/replay.py` | Complete retained diagnostic integration arithmetic | diagnostic passed |
 | M28 | Atomic CPU recovery | `training/checkpoint.py`, `dynamics/integrator.py` | 55 interruption cases | diagnostic passed |
 | M29 | Scientific viewer | `viewer/export.py`, `viewer/viewer.html` | Browser-checked real predictions and failure reason | partial; acquisition timeline absent |
-| M30 | Raw resource/cost work | `evaluation/benchmark.py`, `artifacts/runtime.py` | 740 CPU samples, ten dynamics starts and independent replay; historical 30-minute stress | partial; CUDA matched scaling and acquisition cost unverified |
+| M30 | Raw resource/cost work | `evaluation/benchmark.py`, `evaluation/resource_pilot.py`, `acquisition/analysis.py` | 740 timing samples, 120 full-architecture CPU pilot samples and nine measured acquisition rounds | partial; CUDA matched scaling and full cost unverified |
 | M31 | Derivations and docs | `docs/` | Eight ADRs, ten editable/rendered DOT diagrams, four source walkthroughs | diagnostic documentation passed |
 | M32 | Independent artifact verification | `artifacts/verify.py`, `artifacts/controls.py` | Valid diagnostic bundle and 16 actual corruption rejections | partial; full positive assembly/coverage absent |
 

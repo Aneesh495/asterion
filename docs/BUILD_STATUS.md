@@ -147,6 +147,24 @@ objective is quadratic current predictions; no supervised fitting or accuracy re
 Full campaign hours remain unavailable because reference, validation and I/O costs are not
 projected. This is now a required stage/family in full receipts and verification.
 
+`resource-pilot-20` ran the full configured architecture on all four primary systems and MD22
+using CPU float32. All ten system/model states and 120 timing samples verified independently.
+Observed native process peak was 2412216320 bytes; mean force-loss-backward sample was
+0.647543 seconds across the mixed system/batch population. Execution commit is 76bd953.
+These shared-host observations are neither CUDA measurements nor a full campaign estimate.
+
+Two fresh package environments installed the wheel with all dependencies constrained by hashes
+exported from the lock. Both installed-code inventories matched source and passed 648 tests.
+Wheel SHA256 is `bbafe48c4604dca937feccc62285a637b6d5b3425131f51962f046550cca013d`.
+The wheel was built from the source distribution; inspection found no private ledgers, datasets,
+checkpoints or run evidence packaged. `runs/clean-build-20/BUILD_VERIFICATION.json` and both JUnit
+files retain results. The initial offline install attempt lacked cached wheels and is retained;
+the hash-checked installation succeeded after fetching official registry packages.
+
+`full-preflight-20` again refused full execution because the host has no CUDA accelerator and
+the separate comparison interpreter has no working CUDA runtime. Its blocked report and exact
+diagnostic are retained. Full research evidence and release remain incomplete.
+
 The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
 It displays unavailable energy/force, disables force overlays and shows the retained collision
 reason at zero of 16 steps. No console errors or horizontal overflow were observed. The screenshot
