@@ -58,9 +58,13 @@ COMMANDS = (
 )
 
 
-def selected_model(runs, device="cpu", dtype=torch.float64):
+def selected_model(runs, device="cpu", dtype=torch.float64, budget=None):
     units = read_json(runs / "training-units.json")
-    entry = next(entry for entry in units if entry["model"] == "equivariant")
+    entry = next(
+        entry
+        for entry in units
+        if entry["model"] == "equivariant" and (budget is None or entry["budget"] == budget)
+    )
     run = runs / entry["path"]
     selection = read_json(run / "selection.json")
     return entry, run, *load_checkpoint(run / selection["checkpoint"], device=device, dtype=dtype)
@@ -118,12 +122,27 @@ def simulate_campaign(config, storage: Path, runs: Path):
 
 
 def demo(config, storage, runs):
+    from asterion.viewer.acquisition import AcquisitionArtifacts
     from asterion.viewer.export import export_viewer
 
-    entry, run, model, checkpoint = selected_model(runs)
+    entry, run, model, checkpoint = selected_model(runs, budget=max(config["budgets"]))
     simulations = read_json(runs / "simulation-units.json")
     trajectory = runs / simulations[0]["path"]
     output = runs / "viewer.html"
+    acquisition = None
+    if (runs / "acquisition/acquisition-units.json").is_file():
+        acquisition = AcquisitionArtifacts(
+            runs,
+            "acquisition/acquisition-units.json",
+            config,
+            read_json(run / "SOURCE_INPUTS.json"),
+            {
+                f"rmd17_{name}.npz": storage / "rmd17" / f"rmd17_{name}.npz"
+                for name in config["acquisition_molecules"]
+            },
+        )
+    elif config["profile"] == "full":
+        raise IntegrityError("full viewer requires actual acquisition observations")
     export_viewer(
         run / "evaluation-predictions.npz",
         trajectory,
@@ -135,6 +154,7 @@ def demo(config, storage, runs):
             "run": runs.name,
             "molecule": entry["molecule"],
         },
+        acquisition,
     )
     # A real fail-closed model evaluation uses an extreme-force validity policy.
     pool, _ = load_rmd17(storage / "rmd17" / f"rmd17_{entry['molecule']}.npz", entry["molecule"])
@@ -158,10 +178,14 @@ def demo(config, storage, runs):
         failure,
         runs / "failure-viewer.html",
         {
+            "source": read_json(run / "SOURCE_INPUTS.json"),
             "checkpoint": checkpoint["identity"],
+            "split": read_json(run / "split.json")["digest"],
+            "molecule": entry["molecule"],
             "intervention": "strict-force-limit",
             "run": runs.name,
         },
+        acquisition,
     )
     return {
         "viewer": str(output),

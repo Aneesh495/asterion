@@ -66,12 +66,23 @@ def paired_block_interval(first, second, blocks, seed=491, repetitions=2000):
 
 def uncertainty_metrics(scores, errors, bound):
     scores, errors, bound = map(np.asarray, (scores, errors, bound))
-    if not len(scores) or scores.shape != errors.shape or bound.shape != errors.shape:
+    if (
+        scores.ndim != 1
+        or not len(scores)
+        or scores.shape != errors.shape
+        or bound.shape != errors.shape
+    ):
         raise ContractError("uncertainty arrays require matched geometry axes")
-    correlation = float(spearmanr(scores, errors).statistic)
+    if any(not np.isfinite(value).all() or np.any(value < 0) for value in (scores, errors, bound)):
+        raise ContractError(
+            "uncertainty scores, errors and bounds require finite nonnegative values"
+        )
+    constant = np.ptp(scores) == 0 or np.ptp(errors) == 0
+    correlation = float("nan") if constant else float(spearmanr(scores, errors).statistic)
+    scale = float(bound.max())
     return {
         "spearman": correlation if np.isfinite(correlation) else None,
         "coverage": float(np.mean(errors <= bound)),
-        "mean_bound": float(bound.mean()),
+        "mean_bound": float((bound / scale).mean() * scale) if scale else 0.0,
         "geometries": len(errors),
     }

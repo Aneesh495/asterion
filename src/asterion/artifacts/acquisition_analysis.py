@@ -11,6 +11,57 @@ def require(condition, message):
         raise IntegrityError(message)
 
 
+def tied_ranks(values):
+    order = np.argsort(values, kind="stable")
+    ranks = np.empty(len(values), dtype=np.float64)
+    begin = 0
+    while begin < len(order):
+        end = begin + 1
+        while end < len(order) and values[order[end]] == values[order[begin]]:
+            end += 1
+        ranks[order[begin:end]] = (begin + end - 1) / 2
+        begin = end
+    return ranks
+
+
+def verify_uncertainty_summary(summary, scores, errors, bounds):
+    values = [np.asarray(value) for value in (scores, errors, bounds)]
+    require(
+        all(
+            value.ndim == 1
+            and value.shape == values[0].shape
+            and len(value) > 0
+            and np.isfinite(value).all()
+            and (value >= 0).all()
+            for value in values
+        ),
+        "uncertainty observations require finite nonnegative matched geometry axes",
+    )
+    score_rank, error_rank = [tied_ranks(value) for value in values[:2]]
+    score_rank -= score_rank.mean()
+    error_rank -= error_rank.mean()
+    denominator = np.linalg.norm(score_rank) * np.linalg.norm(error_rank)
+    correlation = float(np.dot(score_rank, error_rank) / denominator) if denominator else None
+    require(
+        (
+            summary["spearman"] is None
+            if correlation is None
+            else summary["spearman"] is not None
+            and np.isclose(summary["spearman"], correlation, atol=1e-12, rtol=1e-12)
+        ),
+        "committee error-ranking correlation differs from independently ranked observations",
+    )
+    scale = float(values[2].max())
+    mean_bound = float(np.sum(values[2] / scale) / len(values[2]) * scale) if scale else 0.0
+    require(
+        type(summary["geometries"]) is int
+        and summary["geometries"] == len(values[0])
+        and np.isclose(summary["coverage"], np.mean(values[1] <= values[2]), atol=1e-12, rtol=0)
+        and np.isclose(summary["mean_bound"], mean_bound, atol=1e-12, rtol=1e-12),
+        "committee coverage, bound scale or geometry denominator differs from raw observations",
+    )
+
+
 def verify_interval(value, outer=None):
     start, end = value["started_ns"], value["ended_ns"]
     require(

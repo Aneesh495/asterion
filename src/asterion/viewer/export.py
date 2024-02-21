@@ -5,9 +5,16 @@ import numpy as np
 
 from asterion.artifacts.io import atomic_bytes, file_hash, read_json
 from asterion.contracts.errors import IntegrityError
+from asterion.viewer.acquisition import AcquisitionArtifacts, acquisition_payload
 
 
-def export_viewer(predictions: Path, trajectory: Path, output: Path, lineage: dict):
+def export_viewer(
+    predictions: Path,
+    trajectory: Path,
+    output: Path,
+    lineage: dict,
+    acquisition: AcquisitionArtifacts | None = None,
+):
     from asterion.artifacts.verify import independent_metrics
     from asterion.evaluation.replay import replay_trajectory
 
@@ -101,6 +108,7 @@ def export_viewer(predictions: Path, trajectory: Path, output: Path, lineage: di
             **binding,
         },
         "history": history,
+        "acquisition": acquisition_payload(acquisition),
     }
     template = Path(__file__).with_name("viewer.html").read_text()
     serialized = json.dumps(payload, allow_nan=False).replace("<", "\\u003c")

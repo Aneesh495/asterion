@@ -179,6 +179,11 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "benchmark_dynamics": "",
     }
     index = {"junit": "gates/tests.xml", "controls": "gates/full-controls.json"}
+    index.update(
+        viewer="stage-observations/viewer.html",
+        failure_viewer="stage-observations/failure-viewer.html",
+        viewer_failure="stage-observations/demo-failure",
+    )
     index["dynamics_study"] = read_json(evidence / "UNITS.json")["dynamics_study"]
     destination = evidence / "gates"
     destination.mkdir()

@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from asterion.artifacts.io import atomic_npz, file_hash, read_json, write_json
+from asterion.artifacts.viewer import verify_viewer
 from asterion.contracts.errors import IntegrityError
 from asterion.dynamics.analytic import ForceResult, Harmonic
 from asterion.dynamics.detectors import Detector, ValidityPolicy
@@ -81,6 +82,50 @@ def test_viewer_binds_actual_input_artifact_bytes(artifacts):
     data = payload(output)
     assert data["lineage"]["predictions_sha256"] == file_hash(prediction)
     assert data["lineage"]["trajectory_sha256"] == file_hash(run / "trajectory.npz")
+
+
+def test_viewer_verifier_checks_raw_heldout_and_complete_physical_history(artifacts):
+    prediction, run, output = artifacts
+    export_viewer(prediction, run, output, {})
+    assert verify_viewer(output, prediction, run) == {
+        "samples": 1,
+        "frames": 5,
+        "acquisition_rounds": 0,
+    }
+
+
+def change_viewer(output, intervention):
+    data = payload(output)
+    intervention(data)
+    text = output.read_text()
+    original = re.search(r"const data=(.*?);\nconst", text).group(1)
+    output.write_text(text.replace(original, json.dumps(data)))
+
+
+def test_viewer_verifier_rejects_changed_raw_force_in_embedded_payload(artifacts):
+    prediction, run, output = artifacts
+    export_viewer(prediction, run, output, {})
+    change_viewer(output, lambda data: data["samples"][0]["force"][0].__setitem__(0, 5))
+    with pytest.raises(IntegrityError, match="held-out observation"):
+        verify_viewer(output, prediction, run)
+
+
+def test_viewer_verifier_rejects_zero_bound_relabelled_unavailable(artifacts):
+    prediction, run, output = artifacts
+    export_viewer(prediction, run, output, {})
+    change_viewer(
+        output, lambda data: data["frames"][0].__setitem__("uncertainty_available", False)
+    )
+    with pytest.raises(IntegrityError, match="trajectory frame"):
+        verify_viewer(output, prediction, run)
+
+
+def test_viewer_verifier_rejects_modified_executable_template(artifacts):
+    prediction, run, output = artifacts
+    export_viewer(prediction, run, output, {})
+    output.write_text(output.read_text().replace("function render()", "function altered()"))
+    with pytest.raises(IntegrityError, match="executable markup"):
+        verify_viewer(output, prediction, run)
 
 
 def test_viewer_rejects_changed_physical_trajectory(artifacts):

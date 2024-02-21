@@ -33,3 +33,7 @@ must not be represented as bitwise deterministic without measurement.
 Independent commands include `make properties`, `make derivatives`, `make analytic`, `make bench`,
 `make stress`, `make acquire`, `make ablate`, `make secondary`, and `make reference`. Expensive
 commands retain raw outputs; they do not certify the complete campaign by themselves.
+
+Run `make acquire RUN_ID=...` before `make demo RUN_ID=...` to attach independently checked
+acquisition rounds to the local viewer. Full acceptance runs these stages in that order.
+See [viewer observations](VIEWER.md) for displayed quantities, costs and unavailable states.

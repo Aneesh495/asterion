@@ -212,6 +212,7 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
         verify_cost,
         verify_diversity,
         verify_paired_policies,
+        verify_uncertainty_summary,
     )
 
     for row in outcomes:
@@ -356,13 +357,7 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
             np.allclose(bounds, saved["bounds"], atol=1e-12, rtol=1e-10),
             "committee coverage bounds changed",
         )
-        require(
-            np.isclose(np.mean(errors <= bounds), row["uncertainty"]["coverage"]),
-            "false committee coverage",
-        )
-        require(
-            len(errors) == row["uncertainty"]["geometries"], "false committee geometry denominator"
-        )
+        verify_uncertainty_summary(row["uncertainty"], scores, errors, bounds)
         first_round = read_json(
             next((directory / row["members"][0] / "reveal").glob("round-0000.json"))
         )

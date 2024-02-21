@@ -63,6 +63,9 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         "secondary",
         "controls",
         "guarded_shift",
+        "viewer",
+        "failure_viewer",
+        "viewer_failure",
     }
     require(required <= index.keys(), "full gate observation families are missing")
     require(
@@ -311,6 +314,36 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     verify_acquisition(
         root, index["acquisitions"], config, read_json(root / "SOURCE_INPUTS.json"), dataset_paths
     )
+    from asterion.artifacts.viewer import verify_viewer, viewer_data
+    from asterion.viewer.acquisition import AcquisitionArtifacts, acquisition_payload
+
+    source = read_json(root / "SOURCE_INPUTS.json")
+    acquisition = acquisition_payload(
+        AcquisitionArtifacts(root, index["acquisitions"], config, source, dataset_paths)
+    )
+    units = read_json(root / "UNITS.json")
+    selected = next(
+        unit
+        for unit in units["training"]
+        if unit["model"] == "equivariant" and unit["budget"] == max(config["budgets"])
+    )
+    directory = safe_member(root, selected["path"])
+    selection = read_json(directory / "selection.json")
+    checkpoint = read_json(safe_member(directory, selection["checkpoint"]) / "checkpoint.json")
+    for name, trajectory in (
+        ("viewer", safe_member(root, units["trajectories"][0]["path"])),
+        ("failure_viewer", safe_member(root, index["viewer_failure"])),
+    ):
+        path = safe_member(root, index[name])
+        verify_viewer(path, directory / "evaluation-predictions.npz", trajectory, acquisition)
+        lineage = viewer_data(path)["lineage"]
+        require(
+            lineage["checkpoint"] == checkpoint["identity"]
+            and lineage["source"] == source
+            and lineage["split"] == read_json(directory / "split.json")["digest"]
+            and lineage["molecule"] == selected["molecule"],
+            "viewer source, model, split or molecule lineage changed",
+        )
     expected = {
         (m, s, p, b)
         for m in config["acquisition_molecules"]
