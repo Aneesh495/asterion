@@ -236,13 +236,19 @@ def dispatch(args):
     if args.command == "verify":
         from asterion.artifacts.verify import verify
 
-        return verify(args.evidence, args.profile or config["profile"], candidate=args.candidate)
+        return verify(
+            args.evidence,
+            args.profile or config["profile"],
+            candidate=args.candidate,
+            storage=storage,
+        )
     if args.command == "controls":
         return controls(
             args.evidence,
             runs / "controls.json",
             args.profile or config["profile"],
             candidate=args.candidate,
+            storage=storage,
         )
     if args.command == "doctor":
         return doctor(config, storage)
@@ -265,7 +271,7 @@ def dispatch(args):
     if args.command == "release":
         from asterion.artifacts.verify import verify
 
-        verify(args.evidence, "full")
+        verify(args.evidence, "full", storage=storage)
         subprocess.run(["uv", "build", "--offline"], cwd=root, check=True)
         return {"status": "passed", "source": source_inputs()["digest"]}
     journal = CommandJournal(runs / "COMMANDS.jsonl")

@@ -26,7 +26,7 @@ def modify_json(path, mutation):
     write_json(path, value)
 
 
-def controls(bundle: Path, output: Path, profile="diagnostic", candidate=False):
+def controls(bundle: Path, output: Path, profile="diagnostic", candidate=False, storage=None):
     output.parent.mkdir(parents=True, exist_ok=True)
     initial_manifest = file_hash(bundle / "MANIFEST.json")
     env = {**os.environ, "OMP_NUM_THREADS": "2", "MKL_NUM_THREADS": "2"}
@@ -40,6 +40,8 @@ def controls(bundle: Path, output: Path, profile="diagnostic", candidate=False):
         "--profile",
         profile,
     ]
+    if storage is not None:
+        command.extend(("--storage", str(storage.resolve())))
     if candidate:
         if profile != "full":
             raise IntegrityError("candidate controls require the full profile")

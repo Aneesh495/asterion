@@ -21,7 +21,7 @@ def require(condition, message):
         raise IntegrityError(message)
 
 
-def verify_resource_pilot(root, path, config, source, datasets):
+def verify_resource_pilot(root, path, config, source, datasets, storage=None):
     report_file = safe_member(root, path)
     directory = report_file.parent
     report = read_json(report_file)
@@ -78,11 +78,9 @@ def verify_resource_pilot(root, path, config, source, datasets):
                 data = datasets[f"rmd17_{name}.npz"]
                 coordinate_key, number_key = "coords", "nuclear_charges"
             else:
-                manifest = read_json(Path("configs/md22-release.json"))
-                data = Path(row["dataset_path"])
-                require(
-                    file_hash(data) == manifest["sha256"], "pilot secondary author data changed"
-                )
+                from asterion.artifacts.datasets import pinned_md22
+
+                data = pinned_md22(storage, Path(row["dataset_path"]))
                 coordinate_key, number_key = "R", "z"
             require(
                 digest == file_hash(data) and int(position) == index,

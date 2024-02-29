@@ -566,11 +566,11 @@ def execute_research(config, config_path, storage: Path, run: Path, evidence: Pa
             runner.execute(stage)
         candidate = evidence.with_name(evidence.name + ".candidate")
         build_full_candidate(config, storage, run, candidate)
-        verified = verify(candidate, "full", candidate=True)
+        verified = verify(candidate, "full", candidate=True, storage=storage)
         control_path = run / "full-controls.json"
-        controls(candidate, control_path, "full", candidate=True)
+        controls(candidate, control_path, "full", candidate=True, storage=storage)
         promote_full(candidate, evidence, control_path, verified)
-        result = verify(evidence, "full")
+        result = verify(evidence, "full", storage=storage)
         runner.state["status"] = "passed"
         write_json(runner.state_path, runner.state)
         return result

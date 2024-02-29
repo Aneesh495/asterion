@@ -172,6 +172,25 @@ and DOM observations are retained under `runs/viewer-10/initial-rejection-15`.
 
 ## Executed checks
 
+`viewer-integration-21` executed seven managed stages at commit
+`52a05d84a445e77518367bcd4286c0d4e6efacb1`, source digest
+`43bf13f6542242f1b895edce61e169548b2b0c57c269ce50c0df11fabd3434a8`.
+All 663 tests passed. Two original primary models, nine acquisition rounds with 27 original
+members, primary dynamics and a separate 32-step thermostat/refinement study passed their
+independent artifact checks. Both viewers' embedded predictions, histories, frames and all
+nine acquisition rounds were checked against raw observations. This remains two-epoch CPU
+integration, not useful learning, policy advantage or full acceptance.
+
+The actual browser exposed a 390px layout overflowing to 722px. That failed observation and
+screenshot remain under `runs/viewer-integration-21`. Commit `5aee669` corrected the long-ID
+wrapping. `runs/viewer-layout-21b` records the renderer's separate source identity, unchanged
+scientific inputs, corrected exports and new screenshots. Policy/round controls and the final
+newly selected coordinate worked; unavailable force layers were disabled. Desktop width and
+document width were both 1280px; narrow width and document width were both 390px. The wide
+acquisition table scrolls inside its own container. No browser console errors were observed.
+
+The user confirmed no CUDA machine is available and requested continued local work.
+
 | Run | Observed result | Scope |
 | --- | --- | --- |
 | `integration-05` | Two original models, 16 held-out geometries each, eight learned steps, 16 saved-weight probes and 16 rejected controls | Two epochs at execution commit 144cd5e; integration only |
@@ -210,14 +229,16 @@ clean installations and package release have not been exercised against current 
 Guarded comparison and temporal-slice raw validation, saved-checkpoint history/normalizer checks
 and raw ablation verification are implemented. The guarded CPU integration verified two saved models;
 five original ablation fixtures replay saved weights and reject altered summaries.
-Complete gate/source/command coverage, reference compatibility and resource pilot, acquisition viewer paths, uncertainty
-validity checks and substantive numerical tests remain to finish. A temporal slice of an
+Complete gate/source/test coverage, portable full assembly and release/recovery integration
+remain to finish. The CPU reference compatibility run, original resource pilot, acquisition
+viewer paths and uncertainty summary reconstruction are implemented and measured locally.
+A temporal slice of an
 arbitrarily sampled training pool does not establish a temporally guarded training comparison.
 
 No GitHub remote or hosted publication exists. The last account probe found an invalid Aneesh495
 keyring token. No paid resources were provisioned. Public publication needs a working account
 and direct user authorization; the attached brief alone does not supply it.
 
-Next: measure current runtime, finish initial failure retention and crash receipts, acquisition costs,
-viewer paths and resource pilot, then freeze source for new diagnostic and clean builds.
+Next: finish portable assembly, complete feature/gate bindings and release recovery, then freeze
+source for a current learning diagnostic and clean builds.
 On suitable authorized hardware, run the unchanged full workload and verify its actual outputs.

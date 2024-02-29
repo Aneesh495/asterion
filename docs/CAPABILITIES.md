@@ -34,7 +34,7 @@ the requested execution or decisive evidence is missing. Test IDs refer to actua
 | M26 | Failure detectors | `dynamics/detectors.py` | Real extreme-force intervention and invalid cases | diagnostic passed |
 | M27 | Independent physical replay | `evaluation/replay.py` | Complete retained diagnostic integration arithmetic | diagnostic passed |
 | M28 | Atomic CPU recovery | `training/checkpoint.py`, `dynamics/integrator.py` | 55 interruption cases | diagnostic passed |
-| M29 | Scientific viewer | `viewer/export.py`, `viewer/viewer.html` | Browser-checked real predictions and failure reason | partial; acquisition timeline absent |
+| M29 | Scientific viewer | `viewer/export.py`, `viewer/acquisition.py`, `viewer/viewer.html`, `artifacts/viewer.py` | Real nine-round acquisition, raw payload checks and browser-checked policy/round/coordinate controls | diagnostic passed; full viewer population unverified |
 | M30 | Raw resource/cost work | `evaluation/benchmark.py`, `evaluation/resource_pilot.py`, `acquisition/analysis.py` | 740 timing samples, 120 full-architecture CPU pilot samples and nine measured acquisition rounds | partial; CUDA matched scaling and full cost unverified |
 | M31 | Derivations and docs | `docs/` | Eight ADRs, ten editable/rendered DOT diagrams, four source walkthroughs | diagnostic documentation passed |
 | M32 | Independent artifact verification | `artifacts/verify.py`, `artifacts/controls.py` | Valid diagnostic bundle and 16 actual corruption rejections | partial; full positive assembly/coverage absent |

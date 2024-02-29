@@ -20,6 +20,13 @@ is required for each generation. Source changes invalidate a prior bundle; verif
 updates hashes or repairs observations. Raw data remain in ignored storage and are required for
 independent unit and identity checks. Reacquire using the pinned author release manifest.
 
+`make verify EVIDENCE=... DATA=/path/to/storage` resolves author files beneath that storage
+directory without editing the bundle's recorded paths or hashes. Primary files must be at
+`rmd17/<pinned filename>` and MD22 at `md22/<pinned filename>`. The verifier still checks the
+committed release metadata, primary MD5 and SHA256, and secondary SHA256 and exact byte size.
+An explicit storage override does not fall back to recorded paths when a file is missing.
+The same override applies to controls, full verification, reference inputs and resource pilots.
+
 `make train RUN_ID=... CONFIG=configs/full.json` selects the full original training matrix.
 `make acceptance RUN_ID=...` performs full preflight and records any blocked gate without
 claiming success. The full stage coordinator and candidate promotion are implemented but the complete campaign

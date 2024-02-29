@@ -15,7 +15,9 @@ def require(condition, message):
         raise IntegrityError(message)
 
 
-def verify_full_gates(root: Path, report, config, observations, candidate=False):
+def verify_full_gates(
+    root: Path, report, config, observations, candidate=False, dataset_paths=None, storage=None
+):
     """Derive full gate populations from retained raw records, never from summary counts."""
     path = root / "GATE_OBSERVATIONS.json"
     require(path.is_file(), "full gate observation index is missing")
@@ -143,10 +145,11 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         evaluation_boundaries[checkpoint["identity"]] = [
             f"{prefix}:{row}" for row in read_json(directory / "split.json")["evaluation"][:8]
         ]
-    derivative_data = {
-        record["name"]: Path(record["path"])
-        for record in read_json(root / "DATASETS.json")["files"]
-    }
+    if dataset_paths is None:
+        from asterion.artifacts.verify import check_dataset
+
+        dataset_paths = check_dataset(read_json(root / "DATASETS.json"), storage)
+    derivative_data = dataset_paths
     from asterion.artifacts.resource_pilot import verify_resource_pilot
 
     counts["resource_pilot"] = verify_resource_pilot(
@@ -155,6 +158,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         config,
         read_json(root / "SOURCE_INPUTS.json"),
         derivative_data,
+        storage,
     )
     verify_derivative_campaign(
         root, index["derivatives"], read_json(root / "SOURCE_INPUTS.json"), models, derivative_data
@@ -307,10 +311,6 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     acquisitions = read_json(safe_member(root, index["acquisitions"]))
     from asterion.artifacts.studies import verify_acquisition
 
-    dataset_paths = {
-        record["name"]: Path(record["path"])
-        for record in read_json(root / "DATASETS.json")["files"]
-    }
     verify_acquisition(
         root, index["acquisitions"], config, read_json(root / "SOURCE_INPUTS.json"), dataset_paths
     )
@@ -474,7 +474,7 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
         )
         record = datasets[f"rmd17_{row['molecule']}.npz"]
         require(record["sha256"] == row["dataset"], "reference dataset lineage changed")
-        with np.load(record["path"], allow_pickle=False) as author:
+        with np.load(dataset_paths[record["name"]], allow_pickle=False) as author:
             from asterion.data.extxyz import reference_arrays
 
             for role, selected in (
@@ -549,7 +549,9 @@ def verify_full_gates(root: Path, report, config, observations, candidate=False)
     secondary = read_json(safe_member(root, index["secondary"]))
     from asterion.artifacts.studies import verify_secondary
 
-    verify_secondary(root, index["secondary"], config, read_json(root / "SOURCE_INPUTS.json"))
+    verify_secondary(
+        root, index["secondary"], config, read_json(root / "SOURCE_INPUTS.json"), storage
+    )
     require(
         secondary["training"]["status"] == "passed"
         and len(secondary["trajectories"]) >= 10

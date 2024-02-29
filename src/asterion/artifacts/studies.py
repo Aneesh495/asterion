@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from asterion.artifacts.io import file_hash, object_hash, read_json, safe_member
+from asterion.artifacts.io import object_hash, read_json, safe_member
 from asterion.contracts.errors import IntegrityError
 from asterion.contracts.geometry import Chemistry, Geometry, collate
 from asterion.evaluation.replay import replay_trajectory
@@ -45,19 +45,15 @@ def model_trajectory(directory, model, identity, source):
     return metadata, replay
 
 
-def verify_secondary(root: Path, report_path: str, config, source):
+def verify_secondary(root: Path, report_path: str, config, source, storage: Path | None = None):
+    from asterion.artifacts.datasets import checked_md22
     from asterion.artifacts.verify import verify_training
 
     report_file = safe_member(root, report_path)
     directory = report_file.parent
     report = read_json(report_file)
     dataset = report["dataset"]
-    author_path = Path(dataset["path"])
-    require(
-        author_path.is_file() and file_hash(author_path) == dataset["sha256"],
-        "secondary author data missing or changed",
-    )
-    require(dataset["level"] == "PBE+MBD", "secondary electronic level changed")
+    author_path = checked_md22(dataset, storage)
     entry = {
         "molecule": dataset["name"],
         "model": "equivariant",

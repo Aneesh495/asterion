@@ -72,7 +72,7 @@ def check_source(root: Path):
     return source
 
 
-def check_dataset(records):
+def check_dataset(records, storage: Path | None = None):
     release = read_json(project_root() / "configs/rmd17-release-v4.json")
     require(
         records["version"] == release["version"] == 4 and records["doi"] == release["doi"],
@@ -97,7 +97,7 @@ def check_dataset(records):
     pinned = {row["name"]: row for row in release["files"]}
     files = {}
     for record in records["files"]:
-        path = Path(record["path"])
+        path = storage.resolve() / "rmd17" / record["name"] if storage else Path(record["path"])
         require(
             path.is_file() and file_hash(path) == record["sha256"],
             "external dataset missing or changed",
@@ -538,7 +538,7 @@ def verify_training(
     }
 
 
-def verify(root: Path, expected_profile="full", candidate=False):
+def verify(root: Path, expected_profile="full", candidate=False, storage: Path | None = None):
     root = root.resolve()
     check_manifest(root)
     source = check_source(root)
@@ -560,7 +560,7 @@ def verify(root: Path, expected_profile="full", candidate=False):
 
         validate_campaign(config)
     require(config["profile"] == expected_profile, "campaign profile lineage mismatch")
-    datasets = check_dataset(read_json(root / "DATASETS.json"))
+    datasets = check_dataset(read_json(root / "DATASETS.json"), storage)
     units = read_json(root / "UNITS.json")
     expected = {
         (m, k, s, b)
@@ -662,7 +662,15 @@ def verify(root: Path, expected_profile="full", candidate=False):
     if expected_profile == "full":
         from asterion.artifacts.full_gates import verify_full_gates
 
-        verify_full_gates(root, report, config, observations, candidate=candidate)
+        verify_full_gates(
+            root,
+            report,
+            config,
+            observations,
+            candidate=candidate,
+            dataset_paths=datasets,
+            storage=storage,
+        )
         required_starts = {
             (m, seed, kelvin, start)
             for m in config["molecules"]
