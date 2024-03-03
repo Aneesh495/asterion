@@ -1,5 +1,7 @@
+import os
 import shutil
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -147,6 +149,8 @@ def retain_stage_receipts(runs: Path, evidence: Path):
 def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
     """Copy all mandatory raw families without claiming they passed verification."""
     report = build_diagnostic(config, storage, runs, evidence)
+    for name in ("FROZEN_CONFIGURATION.json", "INPUT_IDENTITIES.json"):
+        shutil.copyfile(runs / name, evidence / name)
     families = {
         "resource_pilot": "pilot",
         "properties": "properties.json",
@@ -276,16 +280,76 @@ def promote_full(candidate: Path, final: Path, controls_path: Path, verified):
         raise IntegrityError("controls belong to another candidate manifest")
     if verified.get("manifest_sha256") != file_hash(candidate / "MANIFEST.json"):
         raise IntegrityError("candidate changed after independent verification")
-    copy_observations(candidate, final)
-    index = read_json(final / "GATE_OBSERVATIONS.json")
-    shutil.copyfile(controls_path, final / index["controls"])
-    report.update(status="passed", candidate_manifest_sha256=file_hash(candidate / "MANIFEST.json"))
-    report["counts"]["negative_controls"] = len(control["controls"])
-    for key in report["gates"]:
-        report["gates"][key]["status"] = "passed"
-    report["reference"]["status"] = report["secondary"]["status"] = "passed"
-    write_json(final / "ACCEPTANCE.json", report)
-    refresh_manifest(final)
+    from asterion.artifacts.campaign import CampaignOwner
+    from asterion.artifacts.verify import check_manifest
+
+    candidate_hash = verified["manifest_sha256"]
+    control_hash = file_hash(controls_path)
+    publication = final.with_name(f".{final.name}.publication")
+    with CampaignOwner(publication, resume=True):
+        if final.exists():
+            raise IntegrityError("publication output appeared while acquiring ownership")
+        holder = Path(tempfile.mkdtemp(prefix="attempt-", dir=publication))
+        staged = holder / "bundle"
+        intent = {
+            "candidate_manifest_sha256": candidate_hash,
+            "controls_sha256": control_hash,
+            "source": source["digest"],
+            "target": str(final.resolve()),
+            "status": "copying",
+        }
+        write_json(holder / "PUBLICATION.json", intent)
+        try:
+            copy_observations(candidate, staged)
+            if file_hash(staged / "MANIFEST.json") != candidate_hash:
+                raise IntegrityError("candidate manifest changed during publication copy")
+            check_manifest(staged)
+            index = read_json(staged / "GATE_OBSERVATIONS.json")
+            retained_controls = safe_member(staged, index["controls"])
+            retained_controls.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(controls_path, retained_controls)
+            if (
+                file_hash(retained_controls) != control_hash
+                or read_json(retained_controls) != control
+            ):
+                raise IntegrityError("controls changed during publication copy")
+            report.update(status="passed", candidate_manifest_sha256=candidate_hash)
+            report["counts"]["negative_controls"] = len(control["controls"])
+            for key in report["gates"]:
+                report["gates"][key]["status"] = "passed"
+            report["reference"]["status"] = report["secondary"]["status"] = "passed"
+            write_json(staged / "ACCEPTANCE.json", report)
+            refresh_manifest(staged)
+            check_manifest(staged)
+            for path in staged.rglob("*"):
+                if path.is_file():
+                    with path.open("rb") as stream:
+                        os.fsync(stream.fileno())
+            for directory in sorted(
+                (p for p in staged.rglob("*") if p.is_dir()),
+                key=lambda p: len(p.parts),
+                reverse=True,
+            ) + [staged]:
+                descriptor = os.open(directory, os.O_RDONLY)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+            if final.exists():
+                raise IntegrityError("publication output appeared during staging")
+            os.rename(staged, final)
+            descriptor = os.open(final.parent, os.O_RDONLY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+            write_json(holder / "PUBLICATION.json", {**intent, "status": "published"})
+        except BaseException as error:
+            write_json(
+                holder / "PUBLICATION.json",
+                {**intent, "status": "interrupted", "error": f"{type(error).__name__}: {error}"},
+            )
+            raise
     return report
 
 

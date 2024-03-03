@@ -191,6 +191,17 @@ acquisition table scrolls inside its own container. No browser console errors we
 
 The user confirmed no CUDA machine is available and requested continued local work.
 
+`portable-integration-22` executed the seven managed integration stages at commit
+`e080adc68177e5635032d449c7866aed4bdfe9e6`, source digest
+`a1233ae30611450659e66d4a93efc9dd6c9b108de9bc5b5d6ddfdfc77d5ab487`.
+All 673 tests passed. After its recorded author directory became unavailable, independent
+verification passed with identical bytes at a relocated storage root. All eleven primary
+author files and the separately pinned MD22 file were checked; the evidence's dataset records
+and manifest stayed unchanged. Sixteen actual bundle controls rejected corruption through
+the relocated CLI path, with positive verification before and after. Four additional real
+embedded-viewer corruptions rejected changed force, budget, bound and termination observations.
+These observations retain their CPU integration scope.
+
 | Run | Observed result | Scope |
 | --- | --- | --- |
 | `integration-05` | Two original models, 16 held-out geometries each, eight learned steps, 16 saved-weight probes and 16 rejected controls | Two epochs at execution commit 144cd5e; integration only |
@@ -229,7 +240,7 @@ clean installations and package release have not been exercised against current 
 Guarded comparison and temporal-slice raw validation, saved-checkpoint history/normalizer checks
 and raw ablation verification are implemented. The guarded CPU integration verified two saved models;
 five original ablation fixtures replay saved weights and reject altered summaries.
-Complete gate/source/test coverage, portable full assembly and release/recovery integration
+Complete gate/source/test coverage, portable full assembly and release packaging
 remain to finish. The CPU reference compatibility run, original resource pilot, acquisition
 viewer paths and uncertainty summary reconstruction are implemented and measured locally.
 A temporal slice of an
@@ -239,6 +250,6 @@ No GitHub remote or hosted publication exists. The last account probe found an i
 keyring token. No paid resources were provisioned. Public publication needs a working account
 and direct user authorization; the attached brief alone does not supply it.
 
-Next: finish portable assembly, complete feature/gate bindings and release recovery, then freeze
+Next: complete feature/gate bindings and release packaging, then freeze
 source for a current learning diagnostic and clean builds.
 On suitable authorized hardware, run the unchanged full workload and verify its actual outputs.

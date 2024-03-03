@@ -150,6 +150,11 @@ def verify_full_gates(
 
         dataset_paths = check_dataset(read_json(root / "DATASETS.json"), storage)
     derivative_data = dataset_paths
+    from asterion.artifacts.inputs import verify_input_identities
+
+    verify_input_identities(
+        root, read_json(root / "SOURCE_INPUTS.json"), config, dataset_paths, storage, finals
+    )
     from asterion.artifacts.resource_pilot import verify_resource_pilot
 
     counts["resource_pilot"] = verify_resource_pilot(

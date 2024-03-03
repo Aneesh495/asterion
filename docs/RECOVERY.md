@@ -1,5 +1,23 @@
 # Recovery runbook
 
+Full campaigns consume `FROZEN_CONFIGURATION.json` in the owned run directory. Changing an
+external configuration file after dispatch cannot change the child stages' consumed snapshot.
+`INPUT_IDENTITIES.json` binds that file, source and verified author population. The coordinator
+checks the frozen configuration and author SHA256/size before and after each scientific stage.
+Independent full verification checks those identities and the actual retained input flags.
+
+Final evidence publication copies into a private attempt directory, checks the copied manifest
+and control bytes, flushes files and directories, and then renames the complete directory into
+the final path. A separate publication owner prevents cooperating publishers from contending.
+Interrupted copies and intent records remain retained. A later retry recovers an absent owner's
+lock and starts another attempt. A real SIGKILL test exercises that boundary with a publication
+protocol fixture; it does not certify the full molecular campaign.
+
+Explicit full continuation verifies an already published final bundle before returning it.
+It can do that without launching a new training campaign. Incomplete candidates and control
+receipts are retained under unique recovery names before reconstruction; completed candidate
+observations and matching finished controls can be reused after their checks.
+
 Each training checkpoint is an immutable directory published by atomic rename. Tensors and JSON
 are written before publication. The JSON identity includes tensor hashes. The latest pointer is
 written only after the generation exists. A run coordinator owns the directory. Do not run two

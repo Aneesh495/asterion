@@ -531,6 +531,17 @@ def execute_research(config, config_path, storage: Path, run: Path, evidence: Pa
     from asterion.artifacts.controls import controls
     from asterion.artifacts.verify import verify
 
+    if resume and evidence.exists():
+        if read_json(evidence / "CAMPAIGN.json") != config:
+            raise IntegrityError("cannot resume published evidence with different configuration")
+        with CampaignOwner(run, resume=True):
+            result = verify(evidence, "full", storage=storage)
+            state = read_json(run / "STAGES.json")
+            if state["identity"] != read_json(evidence / "STAGES.json")["identity"]:
+                raise IntegrityError("published evidence belongs to another coordinator")
+            state["status"] = "passed"
+            write_json(run / "STAGES.json", state)
+        return result
     preflight = full_preflight(config)
     if preflight["status"] != "ready":
         if evidence.exists():
@@ -559,16 +570,56 @@ def execute_research(config, config_path, storage: Path, run: Path, evidence: Pa
         }
     )
     with CampaignOwner(run, resume), cancellation_signals():
+        from asterion.artifacts.inputs import CampaignInputs
+
+        inputs = CampaignInputs(run, config, storage, preflight["source"]["digest"])
         runner = StageRunner(run, identity, resume=resume)
-        for stage in research_stages(config_path, storage, run, resume):
+        for stage in research_stages(inputs.configuration, storage, run, resume):
             if source_inputs()["digest"] != preflight["source"]["digest"]:
                 raise IntegrityError("source changed during the research campaign")
+            inputs.check(require_data=stage.name not in {"tests", "data"})
             runner.execute(stage)
+            if stage.name == "data":
+                inputs.freeze_data()
+            inputs.check(require_data=stage.name != "tests")
+            if source_inputs()["digest"] != preflight["source"]["digest"]:
+                raise IntegrityError("source changed while executing the research stage")
         candidate = evidence.with_name(evidence.name + ".candidate")
-        build_full_candidate(config, storage, run, candidate)
+        if candidate.exists():
+            if not resume:
+                raise IntegrityError("candidate exists; explicit resume required")
+            try:
+                verify(candidate, "full", candidate=True, storage=storage)
+            except (IntegrityError, OSError, ValueError, KeyError) as error:
+                retained = candidate.with_name(f"{candidate.name}.interrupted-{uuid.uuid4().hex}")
+                candidate.rename(retained)
+                write_json(
+                    run / f"candidate-recovery-{retained.name}.json",
+                    {"retained": str(retained), "error": f"{type(error).__name__}: {error}"},
+                )
+        if not candidate.exists():
+            build_full_candidate(config, storage, run, candidate)
         verified = verify(candidate, "full", candidate=True, storage=storage)
         control_path = run / "full-controls.json"
-        controls(candidate, control_path, "full", candidate=True, storage=storage)
+        if control_path.exists():
+            try:
+                record = read_json(control_path)
+                complete = (
+                    record["profile"] == "full"
+                    and record["phase"] == "candidate"
+                    and record["candidate_manifest_sha256"] == verified["manifest_sha256"]
+                    and record["positive_before"]["exit"] == record["positive_after"]["exit"] == 0
+                    and record["source_bundle_unchanged"] is True
+                    and len(record["controls"]) >= 12
+                    and all(row["exit"] != 0 and row["stderr"] for row in record["controls"])
+                    and sum(row["semantic_rehashed"] for row in record["controls"]) >= 4
+                )
+            except (IntegrityError, OSError, ValueError, KeyError, TypeError):
+                complete = False
+            if not complete:
+                control_path.rename(run / f"full-controls.interrupted-{uuid.uuid4().hex}.json")
+        if not control_path.exists():
+            controls(candidate, control_path, "full", candidate=True, storage=storage)
         promote_full(candidate, evidence, control_path, verified)
         result = verify(evidence, "full", storage=storage)
         runner.state["status"] = "passed"
