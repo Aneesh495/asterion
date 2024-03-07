@@ -73,8 +73,10 @@ class CampaignInputs:
                 raise IntegrityError(f"frozen author bytes changed: {relative}")
 
 
-def verify_input_identities(root, source, config, primary_paths, storage=None, finals=None):
-    from asterion.artifacts.datasets import pinned_md22
+def verify_input_identities(
+    root, source, config, primary_paths, storage=None, finals=None, secondary_record=None
+):
+    from asterion.artifacts.datasets import checked_md22
 
     record = read_json(root / "INPUT_IDENTITIES.json")
     if (
@@ -89,8 +91,10 @@ def verify_input_identities(root, source, config, primary_paths, storage=None, f
         for name, path in primary_paths.items()
     }
     if "secondary" in config:
-        secondary = read_json(root / "gates/secondary/secondary.json")["dataset"]
-        path = pinned_md22(storage, Path(secondary["path"]))
+        secondary = (
+            secondary_record or read_json(root / "gates/secondary/secondary.json")["dataset"]
+        )
+        path = checked_md22(secondary, storage)
         expected[f"md22/{secondary['filename']}"] = {
             "sha256": file_hash(path),
             "size": path.stat().st_size,
