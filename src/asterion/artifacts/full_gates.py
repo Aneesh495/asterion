@@ -42,6 +42,7 @@ def verify_full_gates(
         "stress",
         "bench",
         "demo",
+        "docs",
     )
     finals = verify_stage_receipts(root, names, scientific=True)
     commands = tuple(name for name in names if name not in {"tests", "data"})
@@ -68,6 +69,7 @@ def verify_full_gates(
         "viewer",
         "failure_viewer",
         "viewer_failure",
+        "docs",
     }
     require(required <= index.keys(), "full gate observation families are missing")
     require(
@@ -79,6 +81,14 @@ def verify_full_gates(
         "separate thermostat or matched-horizon refinement study shortened",
     )
     counts = {}
+    from asterion.artifacts.coverage import verify_feature_coverage
+    from asterion.evaluation.documentation import check_docs
+
+    coverage = verify_feature_coverage(root, read_json(root / "SOURCE_INPUTS.json"), finals)
+    require(
+        read_json(safe_member(root, index["docs"])) == check_docs(project_root()),
+        "retained documentation observations differ from frozen documents",
+    )
     test_functions: list[tuple[str, str]] = []
     for source in (project_root() / "tests").rglob("*.py"):
         tree = ast.parse(source.read_text())
@@ -97,7 +107,10 @@ def verify_full_gates(
         and not tests.findall(".//skipped"),
         "full test invocation has failed or skipped cases",
     )
-    counts["semantic_tests"] = len(test_functions)
+    require(
+        len(test_functions) == coverage["authored_functions"], "authored test discovery disagrees"
+    )
+    counts["semantic_tests"] = coverage["authored_functions"]
     properties = read_json(safe_member(root, index["properties"]))
     require(
         properties["count"] == len(properties["cases"]) >= 10000,

@@ -44,3 +44,12 @@ commands retain raw outputs; they do not certify the complete campaign by themse
 Run `make acquire RUN_ID=...` before `make demo RUN_ID=...` to attach independently checked
 acquisition rounds to the local viewer. Full acceptance runs these stages in that order.
 See [viewer observations](VIEWER.md) for displayed quantities, costs and unavailable states.
+
+After genuine full acceptance, `make release EVIDENCE=evidence/<run> RUN_ID=<run>` creates a new
+`dist/asterion-<run>.tar.gz`. A direct CLI call can set `--release-output /absolute/new/path.tar.gz`.
+Release refuses a diagnostic bundle or candidate. It retains the full evidence and all model
+states once; `SELECTED_MODELS.json` identifies the chosen safe generations within that evidence.
+The archive includes a Git bundle because source verification needs the execution commit, not
+just an unversioned directory of identical-looking files. `REPRODUCE.md` inside the archive gives
+exact reconstruction, author-data acquisition and independent verification commands. This is
+local packaging; no command uploads or publishes the archive.

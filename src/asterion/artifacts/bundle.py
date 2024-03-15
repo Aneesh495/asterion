@@ -167,6 +167,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "secondary": "secondary",
         "guarded_shift": "guarded-shift",
         "benchmark_dynamics": "benchmark-dynamics",
+        "docs": "docs.json",
     }
     endpoints = {
         "resource_pilot": "pilot.json",
@@ -250,6 +251,17 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
     )
     report.pop("full_acceptance", None)
     write_json(evidence / "ACCEPTANCE.json", report)
+    from asterion.artifacts.coverage import feature_coverage
+    from asterion.artifacts.receipts import verify_stage_receipts
+
+    names = list(
+        dict.fromkeys(row["name"] for row in read_json(evidence / "STAGES.json")["stages"])
+    )
+    finals = verify_stage_receipts(evidence, names, scientific=True)
+    write_json(
+        evidence / "FEATURE_COVERAGE.json",
+        feature_coverage(evidence, read_json(evidence / "SOURCE_INPUTS.json"), finals),
+    )
     refresh_manifest(evidence)
     return report
 

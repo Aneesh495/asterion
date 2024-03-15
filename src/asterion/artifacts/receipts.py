@@ -43,7 +43,8 @@ def verify_stage_receipts(root: Path, expected_names, scientific=False):
             if name == "tests":
                 require(
                     argv[1:3] == ["-m", "pytest"]
-                    and any(argument.startswith("--junitxml=") for argument in argv[3:]),
+                    and len(argv) == 4
+                    and argv[3].startswith("--junitxml="),
                     "test receipt does not invoke the declared suite",
                 )
             else:

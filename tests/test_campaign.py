@@ -212,6 +212,7 @@ def test_full_stage_plan_preserves_all_required_families(tmp_path):
         "stress",
         "bench",
         "demo",
+        "docs",
     ]
     assert all(x.validate() for x in stages)
 

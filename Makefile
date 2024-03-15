@@ -9,8 +9,10 @@ EVIDENCE ?= evidence/$(RUN_ID)
 bootstrap:
 	$(UV) sync --locked
 acceptance: CONFIG = configs/full.json
-doctor build data pilot train evaluate ablate stress bench docs demo diagnostic acceptance verify release sample-efficiency acquire simulate controls properties derivatives analytic secondary reference guarded-shift:
+doctor build data pilot train evaluate ablate stress bench demo diagnostic acceptance verify release sample-efficiency acquire simulate controls properties derivatives analytic secondary reference guarded-shift:
 	$(UV) run --locked asterion $@ --config $(CONFIG) --storage $(DATA) --run-id $(RUN_ID) --evidence $(EVIDENCE)
+docs:
+	$(UV) run --locked asterion docs --config $(CONFIG) --run-id $(RUN_ID) --render-docs
 test:
 	$(UV) run --locked pytest
 test-equivariance:

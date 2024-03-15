@@ -662,6 +662,10 @@ def verify(root: Path, expected_profile="full", candidate=False, storage: Path |
     if expected_profile == "full":
         from asterion.artifacts.full_gates import verify_full_gates
 
+        require(
+            set(report.get("gates", {})) == {f"MA{i:02}" for i in range(1, 13)},
+            "full profile gate population is missing or unexplained",
+        )
         verify_full_gates(
             root,
             report,

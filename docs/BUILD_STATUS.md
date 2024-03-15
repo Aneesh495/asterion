@@ -240,8 +240,10 @@ clean installations and package release have not been exercised against current 
 Guarded comparison and temporal-slice raw validation, saved-checkpoint history/normalizer checks
 and raw ablation verification are implemented. The guarded CPU integration verified two saved models;
 five original ablation fixtures replay saved weights and reject altered summaries.
-Complete gate/source/test coverage, portable full assembly and release packaging
-remain to finish. The CPU reference compatibility run, original resource pilot, acquisition
+Machine-readable coverage for all 32 capabilities and 12 gates, read-only frozen documentation
+validation, and verified-release packaging are implemented. The local 736-case suite passed,
+including archive corruption, failed publication, omitted-test and coverage controls. Full positive
+assembly and full release execution remain unverified. The CPU reference compatibility run, original resource pilot, acquisition
 viewer paths and uncertainty summary reconstruction are implemented and measured locally.
 A temporal slice of an
 arbitrarily sampled training pool does not establish a temporally guarded training comparison.
@@ -250,6 +252,12 @@ No GitHub remote or hosted publication exists. The last account probe found an i
 keyring token. No paid resources were provisioned. Public publication needs a working account
 and direct user authorization; the attached brief alone does not supply it.
 
-Next: complete feature/gate bindings and release packaging, then freeze
-source for a current learning diagnostic and clean builds.
+Next: freeze source for a current learning diagnostic and clean builds.
 On suitable authorized hardware, run the unchanged full workload and verify its actual outputs.
+
+The retained `guarded-inputs-integration-23` executed seven managed stages at commit c7cc68d,
+with 688 tests and fourteen checks around frozen configuration and all twelve author inputs.
+Independent verification passed. Two isolated wheel installations for that execution source
+each passed 688 tests; their installed inventories matched the frozen source. Package membership
+checks excluded private accounting, author arrays and run storage. Raw initial install failures
+and corrected install logs remain retained. These are CPU diagnostics and package checks.

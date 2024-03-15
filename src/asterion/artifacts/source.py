@@ -55,7 +55,7 @@ def source_inputs(root: Path | None = None):
     root = root or project_root()
     assert_runtime_source(root)
     paths: list[Path] = []
-    for directory in ("src", "tests", "configs", "scripts", "requirements"):
+    for directory in ("src", "tests", "configs", "scripts", "requirements", "docs", ".github"):
         paths.extend(
             path
             for path in (root / directory).rglob("*")
@@ -63,7 +63,14 @@ def source_inputs(root: Path | None = None):
         )
     paths.extend(
         root / name
-        for name in ("pyproject.toml", "uv.lock", "Makefile", ".python-version")
+        for name in (
+            "pyproject.toml",
+            "uv.lock",
+            "Makefile",
+            ".python-version",
+            "README.md",
+            "LICENSE",
+        )
         if (root / name).exists()
     )
     hashes = {str(path.relative_to(root)): file_hash(path) for path in sorted(paths)}

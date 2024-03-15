@@ -62,3 +62,28 @@ scientific stages retain their whole observation directories. A completed index 
 hide changed weights or absent raw files. Verification checks actual exit status, log hashes,
 elapsed budgets, exact observation ownership, stage order and successful continuation after
 retained failures. The inner CLI command must agree with its managed process definition.
+
+Full evidence also retains `FEATURE_COVERAGE.json`. The committed
+`configs/features.json` maps M01 through M32 to source files, authored tests, actual commands,
+raw families and MA gates. Verification discovers module test functions and class methods from
+the frozen source, checks every one against retained JUnit cases, rejects skipped or repeated
+cases, and reconstructs the complete map. Every production file and authored test file must be
+mapped. Artifact inventories and successful managed command definitions bind the observations.
+`source-test-artifact-bound` describes structural coverage; independent scientific gate checks
+still decide acceptance. A mapping cannot make missing full execution pass.
+
+The documentation stage validates links, public prose and existing diagram labels without editing
+source files. Its retained file hashes must match the frozen documentation. `make docs` explicitly
+regenerates diagram exports before a source freeze. Source identities now include documentation,
+README, license and CI definitions, so a changed mathematical contract invalidates prior evidence.
+
+`make release EVIDENCE=... RUN_ID=...` requires a full final bundle that passes independent
+verification. It builds the wheel from the pinned source distribution, retains build receipts,
+and packages the full raw evidence, safe checkpoint generations, selected-model index, source
+snapshot, Git source bundle, dependency locks and reproduction instructions. Author arrays stay
+external with pinned hashes and explicit license states. The archive normalizes member metadata
+and reads every payload back before committing a new filename. It refuses existing outputs,
+symlinks, path traversal, duplicate members, missing bytes and insufficient disk space. Failed
+attempts and logs remain in owned staging directories. Archive-integrity verification checks
+container bytes only; scientific verification must still run against external author data.
+The full release path remains unexecuted while full CUDA acceptance is blocked.

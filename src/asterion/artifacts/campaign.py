@@ -523,6 +523,7 @@ def research_stages(config_path: Path, storage: Path, run: Path, resume=False):
             "restart",
             ("viewer.html", "failure-viewer.html", "demo-failure"),
         ),
+        Stage("docs", command("docs"), ("docs.json",), 3600, "restart", ("docs.json",)),
     ]
 
 

@@ -2,8 +2,10 @@ import html
 import re
 import shutil
 import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from asterion.artifacts.io import file_hash
 from asterion.contracts.errors import IntegrityError, ResourceError
 
 
@@ -56,7 +58,7 @@ def render_dot_subset(source: Path):
     source.with_suffix(".svg").write_text("\n".join(result))
 
 
-def check_docs(root: Path):
+def check_docs(root: Path, render=False):
     paths = [root / "README.md", *(root / "docs").rglob("*.md")]
     errors = []
     for path in paths:
@@ -68,27 +70,50 @@ def check_docs(root: Path):
                 continue
             relative = target.split("#", 1)[0]
             linked = path.parent / relative
-            if not linked.exists() and not (
-                linked.suffix == ".svg" and linked.with_suffix(".dot").exists()
-            ):
+            if not linked.exists():
                 errors.append(f"broken local link {path.name}: {target}")
     diagrams = list((root / "docs" / "diagrams").glob("*.dot"))
     if len(diagrams) < 10:
         errors.append("fewer than ten editable domain diagrams")
     for source in diagrams:
-        if shutil.which("dot") is None:
-            render_dot_subset(source)
-            continue
+        if render:
+            if shutil.which("dot") is None:
+                render_dot_subset(source)
+            else:
+                try:
+                    subprocess.run(
+                        ["dot", "-Tsvg", str(source), "-o", str(source.with_suffix(".svg"))],
+                        check=True,
+                        capture_output=True,
+                    )
+                except (OSError, subprocess.CalledProcessError) as error:
+                    raise ResourceError("diagram rendering failed") from error
         try:
-            subprocess.run(
-                ["dot", "-Tsvg", str(source), "-o", str(source.with_suffix(".svg"))],
-                check=True,
-                capture_output=True,
-            )
-        except FileNotFoundError as error:
-            raise ResourceError(
-                "Graphviz dot is required to render editable architecture diagrams"
-            ) from error
+            tree = ET.parse(source.with_suffix(".svg"))
+            if tree.getroot().tag != "{http://www.w3.org/2000/svg}svg":
+                raise ValueError("missing SVG root")
+            labels = [
+                line
+                for label in re.findall(r'\w+\s*\[label="([^"]+)"\]', source.read_text())
+                for line in label.split(r"\n")
+            ]
+            exported = [
+                "".join(node.itertext()) for node in tree.iter("{http://www.w3.org/2000/svg}text")
+            ]
+            if not labels or any(label not in exported for label in labels):
+                raise ValueError("diagram labels differ from editable source")
+        except (OSError, ET.ParseError, ValueError) as error:
+            errors.append(f"invalid diagram export {source.name}: {error}")
+    decisions = sorted((root / "docs/adr").glob("[0-9][0-9]-*.md"))
+    if len(decisions) < 8:
+        errors.append("fewer than eight architecture decisions")
     if errors:
         raise IntegrityError("; ".join(errors))
-    return {"status": "passed", "markdown_files": len(paths), "rendered_diagrams": len(diagrams)}
+    retained = sorted({*paths, *diagrams, *(p.with_suffix(".svg") for p in diagrams)})
+    return {
+        "status": "passed",
+        "markdown_files": len(paths),
+        "validated_diagrams": len(diagrams),
+        "architecture_decisions": len(decisions),
+        "files": {str(p.relative_to(root)): file_hash(p) for p in retained},
+    }

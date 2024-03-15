@@ -265,15 +265,19 @@ def dispatch(args):
     if args.command == "docs":
         from asterion.evaluation.documentation import check_docs
 
-        return check_docs(root)
+        def documentation():
+            result = check_docs(root, render=args.render_docs)
+            write_json(runs / "docs.json", result)
+            return result
+
+        return CommandJournal(runs / "COMMANDS.jsonl").execute("docs", documentation)
     if args.command == "acceptance":
         return full_acceptance(config, storage, runs, args.evidence, args.config, args.resume)
     if args.command == "release":
-        from asterion.artifacts.verify import verify
+        from asterion.artifacts.release import build_release
 
-        verify(args.evidence, "full", storage=storage)
-        subprocess.run(["uv", "build", "--offline"], cwd=root, check=True)
-        return {"status": "passed", "source": source_inputs()["digest"]}
+        output = args.release_output or root / "dist" / f"asterion-{args.run_id}.tar.gz"
+        return build_release(args.evidence.resolve(), storage, output.resolve())
     journal = CommandJournal(runs / "COMMANDS.jsonl")
     if args.command == "pilot":
         from asterion.evaluation.resource_pilot import resource_pilot
@@ -395,6 +399,10 @@ def main():
     parser.add_argument("--evidence", type=Path, default=Path("evidence/diagnostic"))
     parser.add_argument("--profile", choices=("full", "diagnostic"))
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--release-output", type=Path, help="new verified release archive path")
+    parser.add_argument(
+        "--render-docs", action="store_true", help="explicitly regenerate diagram exports"
+    )
     parser.add_argument(
         "--candidate",
         action="store_true",

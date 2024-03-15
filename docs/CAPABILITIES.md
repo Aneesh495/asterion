@@ -41,3 +41,8 @@ the requested execution or decisive evidence is missing. Test IDs refer to actua
 
 Every full MA gate is separately tracked in [build status](BUILD_STATUS.md). A partial mechanism
 cannot acquire a passed full status from a successful smoke workload.
+
+The committed [machine-readable register](../configs/features.json) specifies all required source,
+authored test files, managed commands, artifact families and MA gate bindings. Full verification
+reconstructs `FEATURE_COVERAGE.json` from executed cases and raw bytes. This structural binding
+cannot upgrade any unexecuted scientific population in the table above.

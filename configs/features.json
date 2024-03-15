@@ -1,0 +1,763 @@
+{
+  "format": "asterion-features-v1",
+  "features": [
+    {
+      "id": "M01",
+      "mechanism": "Geometry, chemistry and units",
+      "source": [
+        "src/asterion/contracts/geometry.py",
+        "src/asterion/contracts/units.py",
+        "src/asterion/contracts/errors.py"
+      ],
+      "tests": [
+        "tests/test_contracts_graphs.py",
+        "tests/test_mechanics_contracts.py"
+      ],
+      "stages": [
+        "tests",
+        "analytic"
+      ],
+      "artifacts": [
+        "analytic"
+      ],
+      "gates": [
+        "MA01",
+        "MA07"
+      ]
+    },
+    {
+      "id": "M02",
+      "mechanism": "Pinned bounded author data",
+      "source": [
+        "src/asterion/data/release.py",
+        "src/asterion/data/secondary.py",
+        "src/asterion/data/archive.py",
+        "src/asterion/data/dataset.py"
+      ],
+      "tests": [
+        "tests/test_dataset_provenance.py",
+        "tests/test_dataset_archive.py"
+      ],
+      "stages": [
+        "data",
+        "pilot"
+      ],
+      "artifacts": [
+        "datasets",
+        "resource_pilot"
+      ],
+      "gates": [
+        "MA02"
+      ]
+    },
+    {
+      "id": "M03",
+      "mechanism": "Frozen splits and correlation audit",
+      "source": [
+        "src/asterion/data/splits.py",
+        "src/asterion/training/shift.py",
+        "src/asterion/artifacts/shift.py"
+      ],
+      "tests": [
+        "tests/test_shift_observations.py"
+      ],
+      "stages": [
+        "train",
+        "guarded-shift"
+      ],
+      "artifacts": [
+        "training",
+        "guarded_shift"
+      ],
+      "gates": [
+        "MA02",
+        "MA06"
+      ]
+    },
+    {
+      "id": "M04",
+      "mechanism": "Label reveal and normalization",
+      "source": [
+        "src/asterion/data/ledger.py",
+        "src/asterion/data/indices.py",
+        "src/asterion/training/engine.py",
+        "src/asterion/training/identity.py"
+      ],
+      "tests": [
+        "tests/test_data_acquisition.py",
+        "tests/test_row_identities.py"
+      ],
+      "stages": [
+        "train",
+        "acquire"
+      ],
+      "artifacts": [
+        "training",
+        "acquisitions"
+      ],
+      "gates": [
+        "MA02",
+        "MA09"
+      ]
+    },
+    {
+      "id": "M05",
+      "mechanism": "Original batched radius graph",
+      "source": [
+        "src/asterion/graphs/radius.py",
+        "src/asterion/graphs/components.py",
+        "src/asterion/evaluation/property_campaign.py"
+      ],
+      "tests": [
+        "tests/test_contracts_graphs.py",
+        "tests/test_components.py"
+      ],
+      "stages": [
+        "properties"
+      ],
+      "artifacts": [
+        "properties"
+      ],
+      "gates": [
+        "MA01"
+      ]
+    },
+    {
+      "id": "M06",
+      "mechanism": "Smooth cutoff and neighbor reuse",
+      "source": [
+        "src/asterion/graphs/radial.py",
+        "src/asterion/graphs/radius.py"
+      ],
+      "tests": [
+        "tests/test_models.py",
+        "tests/test_contracts_graphs.py"
+      ],
+      "stages": [
+        "bench",
+        "properties"
+      ],
+      "artifacts": [
+        "benchmark",
+        "properties"
+      ],
+      "gates": [
+        "MA04",
+        "MA11"
+      ]
+    },
+    {
+      "id": "M07",
+      "mechanism": "Irrep feature identity",
+      "source": [
+        "src/asterion/representations/features.py"
+      ],
+      "tests": [
+        "tests/test_domains_features.py",
+        "tests/test_components.py"
+      ],
+      "stages": [
+        "train"
+      ],
+      "artifacts": [
+        "training"
+      ],
+      "gates": [
+        "MA03"
+      ]
+    },
+    {
+      "id": "M08",
+      "mechanism": "Original scalar invariant energy",
+      "source": [
+        "src/asterion/models/potential.py"
+      ],
+      "tests": [
+        "tests/test_models.py"
+      ],
+      "stages": [
+        "train",
+        "evaluate"
+      ],
+      "artifacts": [
+        "training"
+      ],
+      "gates": [
+        "MA05"
+      ]
+    },
+    {
+      "id": "M09",
+      "mechanism": "Original O(3) equivariant composition",
+      "source": [
+        "src/asterion/models/potential.py"
+      ],
+      "tests": [
+        "tests/test_models.py",
+        "tests/test_derivatives.py"
+      ],
+      "stages": [
+        "train",
+        "derivatives"
+      ],
+      "artifacts": [
+        "training",
+        "derivatives"
+      ],
+      "gates": [
+        "MA03",
+        "MA05"
+      ]
+    },
+    {
+      "id": "M10",
+      "mechanism": "Quadratic higher order readout ablation",
+      "source": [
+        "src/asterion/models/potential.py",
+        "src/asterion/artifacts/ablations.py"
+      ],
+      "tests": [
+        "tests/test_raw_ablation.py"
+      ],
+      "stages": [
+        "ablate"
+      ],
+      "artifacts": [
+        "ablations"
+      ],
+      "gates": [
+        "MA10"
+      ]
+    },
+    {
+      "id": "M11",
+      "mechanism": "Conservative physical force",
+      "source": [
+        "src/asterion/models/potential.py"
+      ],
+      "tests": [
+        "tests/test_derivatives.py",
+        "tests/test_mechanics_contracts.py"
+      ],
+      "stages": [
+        "derivatives"
+      ],
+      "artifacts": [
+        "derivatives"
+      ],
+      "gates": [
+        "MA04"
+      ]
+    },
+    {
+      "id": "M12",
+      "mechanism": "Force loss double backward",
+      "source": [
+        "src/asterion/training/engine.py"
+      ],
+      "tests": [
+        "tests/test_derivatives.py",
+        "tests/test_training_artifacts.py"
+      ],
+      "stages": [
+        "train",
+        "derivatives"
+      ],
+      "artifacts": [
+        "training",
+        "derivatives"
+      ],
+      "gates": [
+        "MA04",
+        "MA05"
+      ]
+    },
+    {
+      "id": "M13",
+      "mechanism": "Retained symmetry checks",
+      "source": [
+        "src/asterion/evaluation/checks.py",
+        "src/asterion/artifacts/derivatives.py"
+      ],
+      "tests": [
+        "tests/test_models.py",
+        "tests/test_raw_derivatives.py"
+      ],
+      "stages": [
+        "derivatives"
+      ],
+      "artifacts": [
+        "derivatives"
+      ],
+      "gates": [
+        "MA03"
+      ]
+    },
+    {
+      "id": "M14",
+      "mechanism": "Net force torque and additivity",
+      "source": [
+        "src/asterion/evaluation/checks.py"
+      ],
+      "tests": [
+        "tests/test_mechanics_contracts.py",
+        "tests/test_raw_derivatives.py"
+      ],
+      "stages": [
+        "derivatives",
+        "analytic"
+      ],
+      "artifacts": [
+        "derivatives",
+        "analytic"
+      ],
+      "gates": [
+        "MA03",
+        "MA07"
+      ]
+    },
+    {
+      "id": "M15",
+      "mechanism": "Force and Hessian finite differences",
+      "source": [
+        "src/asterion/evaluation/checks.py"
+      ],
+      "tests": [
+        "tests/test_derivatives.py",
+        "tests/test_raw_derivatives.py"
+      ],
+      "stages": [
+        "derivatives"
+      ],
+      "artifacts": [
+        "derivatives"
+      ],
+      "gates": [
+        "MA04"
+      ]
+    },
+    {
+      "id": "M16",
+      "mechanism": "Original seeded training and selection",
+      "source": [
+        "src/asterion/training/engine.py",
+        "src/asterion/training/checkpoint.py"
+      ],
+      "tests": [
+        "tests/test_training_artifacts.py",
+        "tests/test_interruption.py"
+      ],
+      "stages": [
+        "train",
+        "evaluate"
+      ],
+      "artifacts": [
+        "training"
+      ],
+      "gates": [
+        "MA05"
+      ]
+    },
+    {
+      "id": "M17",
+      "mechanism": "Paired sample efficiency",
+      "source": [
+        "src/asterion/training/campaign.py",
+        "src/asterion/evaluation/metrics.py"
+      ],
+      "tests": [
+        "tests/test_block_intervals.py",
+        "tests/test_training_artifacts.py"
+      ],
+      "stages": [
+        "train",
+        "evaluate"
+      ],
+      "artifacts": [
+        "training"
+      ],
+      "gates": [
+        "MA05",
+        "MA06"
+      ]
+    },
+    {
+      "id": "M18",
+      "mechanism": "Isolated pinned MACE reference",
+      "source": [
+        "src/asterion/training/reference.py",
+        "src/asterion/training/reference_env.py",
+        "src/asterion/data/extxyz.py",
+        "src/asterion/artifacts/reference.py"
+      ],
+      "tests": [
+        "tests/test_reference_contracts.py",
+        "tests/test_reference_history.py",
+        "tests/test_extxyz.py"
+      ],
+      "stages": [
+        "reference"
+      ],
+      "artifacts": [
+        "reference"
+      ],
+      "gates": [
+        "MA05",
+        "MA06"
+      ]
+    },
+    {
+      "id": "M19",
+      "mechanism": "Independent three member committee and calibration",
+      "source": [
+        "src/asterion/uncertainty/committee.py",
+        "src/asterion/uncertainty/moments.py"
+      ],
+      "tests": [
+        "tests/test_committee_contracts.py",
+        "tests/test_uncertainty_range.py"
+      ],
+      "stages": [
+        "acquire"
+      ],
+      "artifacts": [
+        "acquisitions"
+      ],
+      "gates": [
+        "MA09",
+        "MA10"
+      ]
+    },
+    {
+      "id": "M20",
+      "mechanism": "Budgeted acquired labels",
+      "source": [
+        "src/asterion/acquisition/campaign.py",
+        "src/asterion/acquisition/policy.py"
+      ],
+      "tests": [
+        "tests/test_data_acquisition.py",
+        "tests/test_studies.py"
+      ],
+      "stages": [
+        "acquire"
+      ],
+      "artifacts": [
+        "acquisitions"
+      ],
+      "gates": [
+        "MA09"
+      ]
+    },
+    {
+      "id": "M21",
+      "mechanism": "Paired acquisition policy controls",
+      "source": [
+        "src/asterion/acquisition/policy.py",
+        "src/asterion/acquisition/analysis.py",
+        "src/asterion/artifacts/acquisition_analysis.py",
+        "src/asterion/artifacts/studies.py"
+      ],
+      "tests": [
+        "tests/test_studies.py",
+        "tests/test_acquisition_analysis.py"
+      ],
+      "stages": [
+        "acquire",
+        "ablate"
+      ],
+      "artifacts": [
+        "acquisitions",
+        "ablations"
+      ],
+      "gates": [
+        "MA09",
+        "MA10"
+      ]
+    },
+    {
+      "id": "M22",
+      "mechanism": "Original velocity Verlet",
+      "source": [
+        "src/asterion/dynamics/integrator.py",
+        "src/asterion/dynamics/learned.py"
+      ],
+      "tests": [
+        "tests/test_dynamics.py"
+      ],
+      "stages": [
+        "simulate",
+        "analytic"
+      ],
+      "artifacts": [
+        "trajectories",
+        "analytic"
+      ],
+      "gates": [
+        "MA07",
+        "MA08"
+      ]
+    },
+    {
+      "id": "M23",
+      "mechanism": "NVE and BAOAB NVT accounting",
+      "source": [
+        "src/asterion/dynamics/integrator.py",
+        "src/asterion/training/dynamics_study.py",
+        "src/asterion/artifacts/dynamics_study.py",
+        "src/asterion/evaluation/dynamics_statistics.py"
+      ],
+      "tests": [
+        "tests/test_dynamics_statistics.py"
+      ],
+      "stages": [
+        "simulate"
+      ],
+      "artifacts": [
+        "dynamics_study",
+        "trajectories"
+      ],
+      "gates": [
+        "MA07",
+        "MA08"
+      ]
+    },
+    {
+      "id": "M24",
+      "mechanism": "Independent analytic mechanics",
+      "source": [
+        "src/asterion/dynamics/analytic.py",
+        "src/asterion/evaluation/analytic_campaign.py"
+      ],
+      "tests": [
+        "tests/test_dynamics.py",
+        "tests/test_mechanics_contracts.py"
+      ],
+      "stages": [
+        "analytic"
+      ],
+      "artifacts": [
+        "analytic"
+      ],
+      "gates": [
+        "MA07"
+      ]
+    },
+    {
+      "id": "M25",
+      "mechanism": "Matched horizon timestep refinement",
+      "source": [
+        "src/asterion/evaluation/analytic_campaign.py",
+        "src/asterion/evaluation/dynamics_statistics.py"
+      ],
+      "tests": [
+        "tests/test_dynamics_statistics.py"
+      ],
+      "stages": [
+        "analytic",
+        "simulate"
+      ],
+      "artifacts": [
+        "analytic",
+        "dynamics_study"
+      ],
+      "gates": [
+        "MA07",
+        "MA08"
+      ]
+    },
+    {
+      "id": "M26",
+      "mechanism": "Retained detector and rejected initial states",
+      "source": [
+        "src/asterion/dynamics/detectors.py",
+        "src/asterion/dynamics/rejection.py",
+        "src/asterion/artifacts/rejection.py"
+      ],
+      "tests": [
+        "tests/test_initial_rejection.py"
+      ],
+      "stages": [
+        "demo",
+        "stress",
+        "simulate"
+      ],
+      "artifacts": [
+        "viewer_failure",
+        "faults",
+        "trajectories"
+      ],
+      "gates": [
+        "MA08",
+        "MA11"
+      ]
+    },
+    {
+      "id": "M27",
+      "mechanism": "Independent SI physical replay",
+      "source": [
+        "src/asterion/evaluation/replay.py"
+      ],
+      "tests": [
+        "tests/test_dynamics.py",
+        "tests/test_mechanics_contracts.py",
+        "tests/test_uncertainty_viewer.py"
+      ],
+      "stages": [
+        "simulate",
+        "analytic"
+      ],
+      "artifacts": [
+        "trajectories",
+        "analytic"
+      ],
+      "gates": [
+        "MA07",
+        "MA08"
+      ]
+    },
+    {
+      "id": "M28",
+      "mechanism": "Atomic checkpoints campaign and publication recovery",
+      "source": [
+        "src/asterion/training/recovery.py",
+        "src/asterion/training/checkpoint.py",
+        "src/asterion/evaluation/recovery.py",
+        "src/asterion/artifacts/campaign.py",
+        "src/asterion/artifacts/inputs.py",
+        "src/asterion/artifacts/bundle.py"
+      ],
+      "tests": [
+        "tests/test_interruption.py",
+        "tests/test_lost_coordinator.py",
+        "tests/test_publication_recovery.py",
+        "tests/test_campaign_inputs.py",
+        "tests/test_campaign.py"
+      ],
+      "stages": [
+        "stress"
+      ],
+      "artifacts": [
+        "training_recovery",
+        "simulation_recovery",
+        "receipts"
+      ],
+      "gates": [
+        "MA11"
+      ]
+    },
+    {
+      "id": "M29",
+      "mechanism": "Observed scientific viewer",
+      "source": [
+        "src/asterion/viewer/export.py",
+        "src/asterion/viewer/acquisition.py",
+        "src/asterion/viewer/viewer.html",
+        "src/asterion/artifacts/viewer.py"
+      ],
+      "tests": [
+        "tests/test_acquisition_viewer.py",
+        "tests/test_uncertainty_viewer.py"
+      ],
+      "stages": [
+        "demo"
+      ],
+      "artifacts": [
+        "viewer",
+        "failure_viewer",
+        "acquisitions"
+      ],
+      "gates": [
+        "MA12"
+      ]
+    },
+    {
+      "id": "M30",
+      "mechanism": "Measured throughput memory and acquisition costs",
+      "source": [
+        "src/asterion/evaluation/benchmark.py",
+        "src/asterion/evaluation/resource_pilot.py",
+        "src/asterion/artifacts/runtime.py",
+        "src/asterion/artifacts/resource_pilot.py",
+        "src/asterion/acquisition/analysis.py",
+        "src/asterion/training/secondary.py",
+        "src/asterion/artifacts/datasets.py"
+      ],
+      "tests": [
+        "tests/test_runtime_observations.py",
+        "tests/test_resource_pilot.py",
+        "tests/test_acquisition_analysis.py"
+      ],
+      "stages": [
+        "pilot",
+        "bench",
+        "stress",
+        "acquire",
+        "secondary"
+      ],
+      "artifacts": [
+        "resource_pilot",
+        "benchmark",
+        "memory",
+        "acquisitions",
+        "secondary"
+      ],
+      "gates": [
+        "MA11"
+      ]
+    },
+    {
+      "id": "M31",
+      "mechanism": "Derivations decisions and editable diagrams",
+      "source": [
+        "src/asterion/evaluation/documentation.py",
+        "docs/ARCHITECTURE.md",
+        "docs/MODEL.md"
+      ],
+      "tests": [
+        "tests/test_documentation.py"
+      ],
+      "stages": [
+        "docs"
+      ],
+      "artifacts": [
+        "docs"
+      ],
+      "gates": [
+        "MA12"
+      ]
+    },
+    {
+      "id": "M32",
+      "mechanism": "Independent evidence feature and command verification",
+      "source": [
+        "src/asterion/artifacts/verify.py",
+        "src/asterion/artifacts/full_gates.py",
+        "src/asterion/artifacts/source.py",
+        "src/asterion/artifacts/receipts.py",
+        "src/asterion/artifacts/io.py",
+        "src/asterion/artifacts/controls.py",
+        "src/asterion/artifacts/coverage.py",
+        "src/asterion/cli.py",
+        "src/asterion/artifacts/release.py"
+      ],
+      "tests": [
+        "tests/test_stage_receipts.py",
+        "tests/test_source_runtime.py",
+        "tests/test_feature_coverage.py",
+        "tests/test_release.py"
+      ],
+      "stages": [
+        "tests"
+      ],
+      "artifacts": [
+        "junit",
+        "receipts"
+      ],
+      "gates": [
+        "MA01",
+        "MA12"
+      ]
+    }
+  ]
+}
