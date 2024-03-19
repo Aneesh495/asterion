@@ -193,3 +193,44 @@ def test_command_receipt_rejects_unexplained_failed_invocation(tmp_path):
     )
     with pytest.raises(IntegrityError, match="continuation"):
         verify_command_receipts(tmp_path, ("train",))
+
+
+def stress_receipts(tmp_path, missing=None, command="stress"):
+    from asterion.artifacts.io import canonical
+
+    phases = ["simulation-recovery", "training-recovery", "faults", "memory-stress"]
+    records = [
+        {
+            "stage": name,
+            "started_ns": i * 10 + 1,
+            "ended_ns": i * 10 + 2,
+            "exit": 0,
+            "execution": "in-process-original-stage",
+            "argv": ["cli.py", command],
+        }
+        for i, name in enumerate(phases)
+        if name != missing
+    ]
+    (tmp_path / "COMMANDS.jsonl").write_bytes(b"\n".join(canonical(row) for row in records) + b"\n")
+    return {"stress": {"argv": [sys.executable, "-m", "asterion.cli", "stress"], "attempt": 1}}
+
+
+def test_command_receipt_binds_all_stress_phases_to_managed_process(tmp_path):
+    finals = stress_receipts(tmp_path)
+    result = verify_command_receipts(tmp_path, ("stress",), finals)
+    assert set(result) == {"simulation-recovery", "training-recovery", "faults", "memory-stress"}
+
+
+@pytest.mark.parametrize(
+    "phase", ["simulation-recovery", "training-recovery", "faults", "memory-stress"]
+)
+def test_command_receipt_rejects_omitted_stress_phase(tmp_path, phase):
+    finals = stress_receipts(tmp_path, missing=phase)
+    with pytest.raises(IntegrityError, match="absent"):
+        verify_command_receipts(tmp_path, ("stress",), finals)
+
+
+def test_command_receipt_rejects_substituted_stress_process(tmp_path):
+    finals = stress_receipts(tmp_path, command="bench")
+    with pytest.raises(IntegrityError, match="differs"):
+        verify_command_receipts(tmp_path, ("stress",), finals)

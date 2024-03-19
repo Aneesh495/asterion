@@ -139,29 +139,40 @@ def verify_stage_receipts(root: Path, expected_names, scientific=False):
 
 def verify_command_receipts(root, expected_names, finals=None):
     records = read_json_lines(root / "COMMANDS.jsonl")
+    # Stress has four independently journaled phases inside its single managed process.
+    labels = {
+        name: (
+            ("simulation-recovery", "training-recovery", "faults", "memory-stress")
+            if name == "stress"
+            else (name,)
+        )
+        for name in expected_names
+    }
+    owners = {label: name for name, phases in labels.items() for label in phases}
     latest = {}
     for row in records:
         name = row["stage"]
-        require(name in expected_names, "unexplained evidence command")
+        require(name in owners, "unexplained evidence command")
+        owner = owners[name]
         require(
             row["ended_ns"] >= row["started_ns"]
             and row["execution"] == "in-process-original-stage",
             "invalid command execution receipt",
         )
         if finals is not None:
-            argv = finals[name]["argv"]
+            argv = finals[owner]["argv"]
             require(
                 argv[:1] and argv[1:3] == ["-m", "asterion.cli"] and argv[3:] == row["argv"][1:],
                 "inner command differs from the managed stage definition",
             )
         if row["exit"] != 0:
             require(
-                finals is not None and row.get("error") and finals[name]["attempt"] > 1,
+                finals is not None and row.get("error") and finals[owner]["attempt"] > 1,
                 "failed command has no retained successful continuation",
             )
         latest[name] = row
     require(
-        set(latest) == set(expected_names) and all(row["exit"] == 0 for row in latest.values()),
+        set(latest) == set(owners) and all(row["exit"] == 0 for row in latest.values()),
         "required command is absent or its last invocation failed",
     )
     return latest
