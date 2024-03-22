@@ -36,3 +36,8 @@ bundle does not make the viewer pass that check.
 The local browser check covers the actual exported artifacts, policy/round changes, acquired
 coordinates, disabled unavailable overlays, narrow-layout overflow and console errors. Passing
 that check establishes the viewer path for the measured run, not full research acceptance.
+
+Uncertainty plots use each frame's availability flag. Unavailable storage values do not become
+zero-score curves, and gaps are not joined across unavailable frames. An available numeric zero
+remains a valid plotted observation. A trajectory without an uncertainty evaluator shows an
+unavailable message and no numeric uncertainty axis or curve.

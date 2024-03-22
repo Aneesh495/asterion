@@ -261,3 +261,12 @@ Independent verification passed. Two isolated wheel installations for that execu
 each passed 688 tests; their installed inventories matched the frozen source. Package membership
 checks excluded private accounting, author arrays and run storage. Raw initial install failures
 and corrected install logs remain retained. These are CPU diagnostics and package checks.
+
+The source-25 diagnostic retained six completed 100-epoch learners, nine learned trajectories
+and generated graph cases before being intentionally interrupted for a viewer defect. The browser
+showed unavailable uncertainty storage values as a zero curve. The renderer now uses the retained
+availability flags and leaves missing observations unplotted. That source-25 run is retained as an
+interrupted attempt, not current acceptance. Two source-25 isolated test attempts also retained
+failures from a relative interpreter launcher: a nested process normalized its path and therefore
+changed the fixture's immutable argv. The new freeze will use absolute interpreter paths without
+changing test expectations or weakening stage identity checks.
