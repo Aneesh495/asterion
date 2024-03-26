@@ -57,6 +57,7 @@ def verify_full_gates(
         "training_recovery",
         "faults",
         "memory",
+        "memory_progress",
         "benchmark",
         "benchmark_dynamics",
         "dynamics_study",
@@ -255,9 +256,28 @@ def verify_full_gates(
     memory = read_json(safe_member(root, index["memory"]))
     require(
         memory["elapsed_seconds"] >= 1800
+        and memory["requested_seconds"] == 1800
         and memory["completed_calls"] > 0
         and len(memory["samples"]) >= 300,
         "30-minute memory stress shortened or empty",
+    )
+    previous_time, previous_calls = 0.0, 0
+    for sample in memory["samples"]:
+        require(
+            set(sample) == {"elapsed_seconds", "completed_calls", "peak_rss_native"}
+            and np.isfinite(sample["elapsed_seconds"])
+            and previous_time < sample["elapsed_seconds"] <= memory["elapsed_seconds"]
+            and type(sample["completed_calls"]) is int
+            and previous_calls < sample["completed_calls"] <= memory["completed_calls"]
+            and type(sample["peak_rss_native"]) is int
+            and sample["peak_rss_native"] > 0,
+            "memory stress samples invent elapsed work or completed calls",
+        )
+        previous_time, previous_calls = sample["elapsed_seconds"], sample["completed_calls"]
+    progress = read_json(safe_member(root, index["memory_progress"]))
+    require(
+        progress == {**memory, "status": "passed", "error": None},
+        "memory stress has missing or inconsistent completion record",
     )
     from asterion.artifacts.io import read_json as read_environment
 

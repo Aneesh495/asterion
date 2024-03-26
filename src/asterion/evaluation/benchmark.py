@@ -1,3 +1,4 @@
+import math
 import resource
 import time
 from dataclasses import asdict
@@ -238,32 +239,55 @@ def benchmark(
 
 
 def memory_stress(model, geometry, output: Path, seconds=1800):
-    samples = []
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise ContractError("memory stress requires a finite positive duration")
+    if output.exists() or output.with_suffix(".progress.json").exists():
+        raise IntegrityError("memory stress output identity already exists")
+    samples: list[dict[str, float | int]] = []
     started = time.monotonic()
     completed = 0
     last_sample = started
     parameter = next(model.parameters())
-    while time.monotonic() - started < seconds:
-        batch = collate([geometry], dtype=parameter.dtype, device=parameter.device)
-        energy, force = model(batch)
-        if not torch.isfinite(energy).all() or not torch.isfinite(force).all():
-            raise RuntimeError("nonfinite stress inference")
-        completed += 1
-        now = time.monotonic()
-        if now - last_sample >= 5:
-            samples.append(
-                {
-                    "elapsed_seconds": now - started,
-                    "completed_calls": completed,
-                    "peak_rss_native": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-                }
-            )
-            last_sample = now
-    result = {
-        "requested_seconds": seconds,
-        "elapsed_seconds": time.monotonic() - started,
-        "completed_calls": completed,
-        "samples": samples,
-    }
-    write_json(output, result)
-    return result
+    progress = output.with_suffix(".progress.json")
+
+    def observation(status, error=None):
+        return {
+            "status": status,
+            "error": error,
+            "requested_seconds": seconds,
+            "elapsed_seconds": time.monotonic() - started,
+            "completed_calls": completed,
+            "samples": samples,
+        }
+
+    write_json(progress, observation("running"))
+    try:
+        while time.monotonic() - started < seconds:
+            batch = collate([geometry], dtype=parameter.dtype, device=parameter.device)
+            energy, force = model(batch)
+            if not torch.isfinite(energy).all() or not torch.isfinite(force).all():
+                raise RuntimeError("nonfinite stress inference")
+            completed += 1
+            now = time.monotonic()
+            if now - last_sample >= 5:
+                samples.append(
+                    {
+                        "elapsed_seconds": now - started,
+                        "completed_calls": completed,
+                        "peak_rss_native": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+                    }
+                )
+                write_json(progress, observation("running"))
+                last_sample = now
+        result = {
+            "requested_seconds": seconds,
+            "elapsed_seconds": time.monotonic() - started,
+            "completed_calls": completed,
+            "samples": samples,
+        }
+        write_json(output, result)
+        write_json(progress, {**result, "status": "passed", "error": None})
+        return result
+    except BaseException as error:
+        write_json(progress, observation("interrupted", f"{type(error).__name__}: {error}"))
+        raise

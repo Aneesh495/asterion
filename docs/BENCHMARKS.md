@@ -85,3 +85,9 @@ Candidate inference and calibration/evaluation timing are included in round obse
 Shared preparation and final summary writes are declared exclusions. Read-only checking binds
 these records to histories and author-coordinate diversity. Actual paired policy outcomes are
 recomputed from held-out errors; timing does not imply better label efficiency.
+
+The 1800-second stress workload saves `memory-stress.progress.json` atomically at its actual
+five-second sample intervals. It retains elapsed time, completed finite energy-plus-force calls
+and measured peak RSS. A running or interrupted record cannot replace the completed stress
+artifact. Successful completion must agree exactly with the final progress record. Retained
+partial identities require an owned new attempt; they are never silently overwritten.

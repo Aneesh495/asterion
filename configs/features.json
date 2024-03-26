@@ -686,7 +686,8 @@
       "tests": [
         "tests/test_runtime_observations.py",
         "tests/test_resource_pilot.py",
-        "tests/test_acquisition_analysis.py"
+        "tests/test_acquisition_analysis.py",
+        "tests/test_stress_progress.py"
       ],
       "stages": [
         "pilot",
@@ -700,7 +701,8 @@
         "benchmark",
         "memory",
         "acquisitions",
-        "secondary"
+        "secondary",
+        "memory_progress"
       ],
       "gates": [
         "MA11"

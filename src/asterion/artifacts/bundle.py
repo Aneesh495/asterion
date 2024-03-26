@@ -160,6 +160,7 @@ def build_full_candidate(config, storage: Path, runs: Path, evidence: Path):
         "training_recovery": "training-recovery",
         "faults": "faults",
         "memory": "memory-stress.json",
+        "memory_progress": "memory-stress.progress.json",
         "benchmark": "benchmark.json",
         "ablations": "ablations",
         "acquisitions": "acquisition",
