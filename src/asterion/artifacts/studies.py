@@ -221,6 +221,7 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
         calibration = []
         model_ids = []
         member_rows = []
+        member_models = []
         for member, path in enumerate(row["members"], 1):
             unit_dir = safe_member(directory, path)
             seed = row["trial"] * 100 + member
@@ -282,6 +283,7 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
                 )
             selection = read_json(unit_dir / "selection.json")
             model, _ = load_checkpoint(unit_dir / selection["checkpoint"])
+            member_models.append(model)
             probes = sorted(
                 range(len(expected_ids)),
                 key=lambda index: object_hash([source["digest"], expected_ids[index]]),
@@ -354,6 +356,18 @@ def verify_acquisition(root: Path, report_path: str, config, source, datasets):
             "committee coverage bounds changed",
         )
         verify_uncertainty_summary(row["uncertainty"], scores, errors, bounds)
+        from asterion.artifacts.committee_shift import verify_committee_shift
+
+        verify_committee_shift(
+            directory,
+            row,
+            config,
+            source,
+            split,
+            fitted,
+            member_models,
+            datasets[f"rmd17_{row['molecule']}.npz"],
+        )
         first_round = read_json(
             next((directory / row["members"][0] / "reveal").glob("round-0000.json"))
         )

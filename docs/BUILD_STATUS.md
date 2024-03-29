@@ -1,272 +1,82 @@
 # Build status
 
-Phase: learned thermostat/refinement integration and study analysis. Full delivery remains incomplete.
+Full delivery remains incomplete. The local implementation and CPU diagnostic are usable;
+the fixed research campaign requires CUDA hardware that is unavailable on this host.
+No workload or acceptance threshold has been reduced.
 
-The current source passes 648 tests, covering 460 authored test functions, and Ruff/mypy.
-`runs/pilot-validation-20/tests.xml` records the full invocation. The 400-authored-test gate
-is met. Private implementation accounting remains outside the repository. No workload requirement
-was lowered.
+## Local implementation
 
-The separate macOS MACE environment now matches its 44 hashed dependency pins. A real two-epoch
-CPU compatibility run completed training, export and eight-geometry evaluation with the declared
-reference architecture. Both commands exited zero; the raw journal independently shows eight
-optimizer updates and 32 processed examples. The first export attempt failed because its model
-directory was absent and is retained. Directory creation and virtual-interpreter symlink handling
-are fixed. The Linux CUDA lock is resolved; its runtime and full retrainings remain unverified.
+The committee temporal-slice change passes all 763 local tests and Ruff/mypy. It retains
+three saved members, disjoint late-time author rows, unchanged primary calibration and
+independent replay of force-error ranking, coverage and bounds. The viewer displays the
+slice observations and raw artifact identities. The suite is retained in
+`runs/committee-shift-27-tests.xml`.
 
-## Current mechanisms
+Machine-readable coverage maps all 32 capabilities and 12 acceptance gates to source,
+executed authored tests, managed stages and raw artifact families. The full verifier
+recomputes those mappings. Read-only documentation validation checks editable diagrams,
+rendered labels, links and decision records without changing frozen source.
 
-Full acceptance executes the fixed stage plan through an exclusive coordinator with bounded
-subprocesses, retained exits/logs/output hashes and completed-stage continuation. Training resumes
-immutable optimizer generations. Interrupted stages without a continuation path retain partial
-observations and restart. SIGINT and SIGTERM stop the owned process group. A live orphan after
-SIGKILL is not duplicated. New training generations contain their own history and selection;
-recovery archives future generations before restoring the resume epoch. Tests inject interruption
-between checkpoint, selection and latest publication, and during recovery archiving.
+Release packaging builds a wheel from its source distribution, includes a Git source
+bundle and verified scientific evidence, excludes author data, and independently reads
+back the bounded archive. Publication is atomic. A diagnostic bundle cannot pass the
+full release gate. Positive full release execution remains unverified.
 
-Model interactions use irrep/graph-tagged tensor features. Models retain electronic level and
-composition. Inference validates active connected components and message allocation budgets.
-The MACE adapter exports labels, calls pinned training/evaluation, parses bounded XYZ and retains
-physical predictions. Verification counts actual reference batches and epochs and checks every
-exported input role against source labels. Dataset verification now also checks the pinned author
-release, file IDs, sizes, MD5s, electronic level and license. Full reference retraining is unexecuted.
+The [capability register](CAPABILITIES.md) records each mechanism and its scientific limit.
 
-Independent study checking replays saved original weights, checks author labels, reconstructs
-committee mean/disagreement/calibration and greedy acquisition choices, and replays secondary
-trajectories. Paired learning intervals use geometry-weighted temporal blocks. Candidate
-verification cannot grant release status; final full verification still requires actual corruption
-controls and every scientific workload.
+## Retained source-bound evidence
 
-Committee construction now requires three saved trained checkpoints with matching seed and
-identity records, distinct model objects and executed weight fingerprints. It rejects changed
-weights or precision and enforces the intersection of retained calibration roles automatically.
-Training and final evaluation labels cannot be admitted by omitting a caller forbidden list.
-Calibration requires finite nonnegative scores/errors, distinct geometry/member identities and
-valid fitted parameters. Tests use three genuinely trained original fixture models.
+`frozen-diagnostic-26` belongs to execution commit
+`6a7acaea89e662c8343299ee0708c96bea56ec37`, with source digest
+`5834f8f98a42688d4c222838210e64934f81b0d170dcc361f0ac0ca225c92070`.
+Its independent check passed after twelve managed stages:
 
-Acquisition-integration-09 executed and independently verified all nine rounds with the stricter
-committee contracts. The viewer now records and displays uncertainty quantity and availability,
-including available zero bounds. Raw replay rejects mislabeling. Actual browser checks exercised
-the shared force overlays, playback and a retained uncertainty-threshold failure at zero of 16
-steps. Reference/error overlays are disabled for generated coordinates. Console errors were absent.
-The browser screenshot and real committee trajectories are retained in `runs/viewer-10`.
+- 749 tests and six original 100-epoch learners, totaling 7800 optimizer updates.
+- Nine learned trajectories totaling 2250 steps.
+- 1200 symmetry, 1000 force-difference, 100 Hessian and 10000 graph cases.
+- 110 analytic fixtures with three matched-horizon timestep replays each.
+- 50 simulation and five training recoveries, plus 100 rejected fault cases.
+- 1800.0017 seconds of stress, 241766 finite energy/force calls and sampled peak RSS
+  of 500121600 bytes, with no measured growth after warmup.
+- 740 raw benchmark samples and sixteen rejected verifier corruptions. Positive
+  verification passed before and after the corruption controls.
 
-Managed stages retain every published checkpoint generation, raw predictions, study observations,
-process log and failed attempt. Independent receipts check order, actual exits, continuation and
-relocated output hashes. `managed-integration-13` exercised four real CLI stages, two original
-models, 32 held-out predictions, eight learned steps and 32 saved-weight probes. All 16 actual
-corruption controls rejected, including 13 with recomputed manifests; positive verification passed
-before and after. Its execution commit is ece5cf7 and source digest is
-`c33ff1f6026fd8d99d5d1ab1bbe0cbf409c725313ce093025ec0f828b40ef8d5`.
-It is a two-epoch integration check, not useful-learning or full acceptance evidence.
+Equivariant held-out force MAE was 0.111071, 0.131622 and 0.129603 eV/angstrom across
+three ethanol seeds, 84.9 to 87.1 percent below zero force. These one-budget CPU results
+do not establish full sample efficiency, chemical transfer or acquisition advantage.
+`runs/frozen-diagnostic-26/INDEPENDENT_CHECK.json` retains the precise scope and raw identities.
 
-Runtime measurement now includes host/device copies, Hessian products and actual learned dynamics.
-The checker derives the full scaling matrix, replays saved outputs and SI trajectories, reconstructs
-velocity/cache traces and checks that throughput uses completed work. Both original architectures
-pass 48 new semantic cases. `runtime-integration-14` retained all 740 raw samples and ten actual
-100-step dynamics starts. Independent saved-weight and SI replay verified 1000 completed steps.
-Its execution commit is da6c029; the measured checkpoint comes from the two-epoch managed run.
-This is a CPU runtime observation, not a useful-learning or molecular-stability result. CUDA timing
-remains unexecuted.
+`components-integration-26` independently checked nine acquisition rounds with 27 trained
+members, guarded comparison, five ablations, learned thermostat/refinement paths and a
+64-label MD22 integration. Its two-epoch scope does not establish useful acquisition or
+long-horizon molecular accuracy.
 
-Rejected initial geometry, invalid force/energy and initial evaluation exceptions now retain
-`failure.npz` and an explicit rejected-initial record with zero valid frames. Nonfinite outputs
-remain raw observations, never valid trajectory values. Independent checking reconstructs failure
-reasons and can replay the rejection using saved weights. The viewer represents unavailable
-force/energy honestly. Actual killed-coordinator tests preserve unknown exit/end/duration, logs
-and successful continuation. A live orphan or unknown launch identity refuses duplicate work.
+Two isolated wheel installations for execution source 6a7acae each passed 749 tests,
+with installed inventories matching that source. The second build produced identical
+wheel bytes. Records are in `runs/clean-build-26-verification.json`. Browser records in
+`runs/browser-check-26b` distinguish renderer and scientific source, show contained desktop
+and 390px layouts, and check that unavailable uncertainty is absent while available zero
+bounds remain visible. The zero-bound fixture is analytic, not a learned uncertainty result.
 
-Committee moments use scaled float64 arithmetic; finite large inputs do not overflow intermediate
-squares. Unrepresentable moments, calibration ratios and bounds fail explicitly. Dataset loading
-checks ZIP populations, NPY headers, native types, shapes and byte budgets before reading array
-bodies. Fractional elements/indices cannot be silently cast. All four author primary files and
-the 85109-frame, 42-atom MD22 file loaded successfully through the new bounded reader. This parser
-integration is retained in `runs/data-compatibility-15`.
+The later committee-slice source has separate execution records under
+`runs/committee-shift-integration-27`. Its independent check defines the executed scope;
+earlier diagnostic results cannot certify executable changes. Every run keeps its original
+source identity, raw data and failed attempts.
 
-Separate learned NVT and matched-horizon refinement studies are now connected to simulation and
-bundle verification. The full protocol specifies two molecules, three seeds, a 1000-step NVT
-path and three NVE refinements at 0.1/0.05/0.025 fs sharing a 100 fs horizon. These studies retain
-temperature time correlations, species-pair bond distributions, center-of-mass/angular momentum
-changes and heat-adjusted drift. Initial frames are excluded from structural samples. The checker
-reconstructs each report, source geometry, initial velocity and saved-weight trajectory, and
-rejects missing/shortened studies. CPU fixture tests pass; fresh learned-model integration is pending.
+## Retained failures and outstanding gates
 
-`managed-integration-16` executed all four CLI stages and retained the learned NVT/refinement
-paths, but independent verification failed on angular-momentum cancellation. The source's
-subtractions differed by about 6.5e-49 kg m²/s on a retained momentum scale near 1.9e-33 kg m²/s.
-The failed invocation and original observations remain unchanged. The checker now derives a
-conditioning-aware float64 comparison scale and requires a boolean resolution claim. Genuine
-original-model tests cover cancellation and still reject an invented 1e-40 kg m²/s change.
-Fresh source-bound integration remains required.
+The source-25 diagnostic was intentionally interrupted after the browser exposed unavailable
+uncertainty as a false zero curve. Its failure, completed work and screenshot remain retained.
+Two source-25 isolated suite failures came from a relative interpreter launcher changing
+immutable nested-process argv. Absolute interpreter paths fixed execution without changing
+test expectations. The first committee-slice test attempt hit exhausted temporary disk;
+its setup errors remain retained. The complete rerun passed.
 
-`managed-integration-16b` independently verified the corrected studies and all four managed CLI
-stages at execution commit e68a71f. Its digest is
-`86e00ab28a3758c3de676d6252b4f1114708d970873ddedd3033d859904ccf0d`.
-The raw NVT and refinement paths total 32 additional steps; the primary path has eight. These
-short observations exercise source/geometry/velocity/weight/report wiring. They do not establish
-equilibration, useful molecular learning or full acceptance.
+`full-preflight-26` refused execution because neither the primary nor comparison runtime
+has CUDA. The full 72-run primary campaign, 12 reference retrainings, million-step dynamics,
+required acquisition and ablation populations, and MD22 long-horizon study remain unexecuted.
+All twelve full scientific gates and positive full release assembly remain unverified.
+The real diagnostic release attempt exited with a profile mismatch and created no release.
 
-Replay now checks completion status against actual requested work, finite stochastic/policy
-configuration, all Cartesian/observation axes, bounded array bodies, seeded NVT noise, per-frame
-geometry/force validity and the integrator's failed candidate. Exponent-overflow JSON cannot
-disable limits or conceal nonfinite arithmetic. A valid trajectory prefix cannot claim completion.
-
-`managed-integration-17` verified the strict replay source at execution commit e5d7d56 and digest
-`9959885a3e58b229c6539239aab694d93137dcac5c9115fb6d890aac5317f84a`.
-All 16 standard corruption controls rejected. Five additional rehashed study controls rejected
-missing NVT cases, invented bond counts, false heat-adjusted drift, false temperature correlation
-and an incomplete path presented as passed. Positive checks passed before and after both sets,
-and the original bundle remained unchanged.
-
-Checkpoint loading now captures physical configuration separately from parameter fingerprints.
-Committee construction and both inference boundaries reject changes to scale, offset or label
-level after loading. Dataset lookup, label access and reveal records also reject boolean, string
-and fractional row identities before integer conversion; rehashed persisted duplicates cannot
-inflate a reveal. These new contracts require fresh integrated acquisition execution.
-
-Acquisition now records actual round/member/decision/inference clock intervals, optimizer updates,
-processed examples and epoch work. Costs explicitly exclude shared preprocessing, initial reveal
-and final summary publication. Coordinate-only selected diversity uses bounded blocks. Paired
-policy outcomes retain the same evaluation units and independently checked temporal-block
-intervals against uniform selection. This new path still needs fresh integrated execution;
-no acquisition advantage or full cost estimate is claimed.
-
-`acquisition-integration-19` completed and independently verified all nine policy/budget rounds,
-27 genuinely trained members, 126 optimizer updates and 1008 processed training examples.
-Measured round intervals total 61.7011 seconds on the shared CPU host, with declared exclusions.
-Member histories, coordinate diversity and all six paired policy comparisons replayed. Its
-execution commit is b17d48c and digest
-`e7ec04af2862c458e0c87374ea5434871c1cf9712443d18d5b9c6a7713b5626e`.
-Two epochs and 8/16/32 labels do not establish useful acquisition or uncertainty ranking.
-
-Full execution now runs a retained original-model resource pilot immediately after data and
-before training. Primary and MD22 coordinates exercise both architectures at batch sizes one
-and eight, with at least three forward/force-loss repetitions. Untrained safetensor states,
-actual outputs/parameter gradients, clocks and peak memory are checked independently. The
-objective is quadratic current predictions; no supervised fitting or accuracy result is claimed.
-Full campaign hours remain unavailable because reference, validation and I/O costs are not
-projected. This is now a required stage/family in full receipts and verification.
-
-`resource-pilot-20` ran the full configured architecture on all four primary systems and MD22
-using CPU float32. All ten system/model states and 120 timing samples verified independently.
-Observed native process peak was 2412216320 bytes; mean force-loss-backward sample was
-0.647543 seconds across the mixed system/batch population. Execution commit is 76bd953.
-These shared-host observations are neither CUDA measurements nor a full campaign estimate.
-
-Two fresh package environments installed the wheel with all dependencies constrained by hashes
-exported from the lock. Both installed-code inventories matched source and passed 648 tests.
-Wheel SHA256 is `bbafe48c4604dca937feccc62285a637b6d5b3425131f51962f046550cca013d`.
-The wheel was built from the source distribution; inspection found no private ledgers, datasets,
-checkpoints or run evidence packaged. `runs/clean-build-20/BUILD_VERIFICATION.json` and both JUnit
-files retain results. The initial offline install attempt lacked cached wheels and is retained;
-the hash-checked installation succeeded after fetching official registry packages.
-
-`full-preflight-20` again refused full execution because the host has no CUDA accelerator and
-the separate comparison interpreter has no working CUDA runtime. Its blocked report and exact
-diagnostic are retained. Full research evidence and release remain incomplete.
-
-The rejected-initial viewer was checked in the actual browser at execution commit 3569e12.
-It displays unavailable energy/force, disables force overlays and shows the retained collision
-reason at zero of 16 steps. No console errors or horizontal overflow were observed. The screenshot
-and DOM observations are retained under `runs/viewer-10/initial-rejection-15`.
-
-## Executed checks
-
-`viewer-integration-21` executed seven managed stages at commit
-`52a05d84a445e77518367bcd4286c0d4e6efacb1`, source digest
-`43bf13f6542242f1b895edce61e169548b2b0c57c269ce50c0df11fabd3434a8`.
-All 663 tests passed. Two original primary models, nine acquisition rounds with 27 original
-members, primary dynamics and a separate 32-step thermostat/refinement study passed their
-independent artifact checks. Both viewers' embedded predictions, histories, frames and all
-nine acquisition rounds were checked against raw observations. This remains two-epoch CPU
-integration, not useful learning, policy advantage or full acceptance.
-
-The actual browser exposed a 390px layout overflowing to 722px. That failed observation and
-screenshot remain under `runs/viewer-integration-21`. Commit `5aee669` corrected the long-ID
-wrapping. `runs/viewer-layout-21b` records the renderer's separate source identity, unchanged
-scientific inputs, corrected exports and new screenshots. Policy/round controls and the final
-newly selected coordinate worked; unavailable force layers were disabled. Desktop width and
-document width were both 1280px; narrow width and document width were both 390px. The wide
-acquisition table scrolls inside its own container. No browser console errors were observed.
-
-The user confirmed no CUDA machine is available and requested continued local work.
-
-`portable-integration-22` executed the seven managed integration stages at commit
-`e080adc68177e5635032d449c7866aed4bdfe9e6`, source digest
-`a1233ae30611450659e66d4a93efc9dd6c9b108de9bc5b5d6ddfdfc77d5ab487`.
-All 673 tests passed. After its recorded author directory became unavailable, independent
-verification passed with identical bytes at a relocated storage root. All eleven primary
-author files and the separately pinned MD22 file were checked; the evidence's dataset records
-and manifest stayed unchanged. Sixteen actual bundle controls rejected corruption through
-the relocated CLI path, with positive verification before and after. Four additional real
-embedded-viewer corruptions rejected changed force, budget, bound and termination observations.
-These observations retain their CPU integration scope.
-
-| Run | Observed result | Scope |
-| --- | --- | --- |
-| `integration-05` | Two original models, 16 held-out geometries each, eight learned steps, 16 saved-weight probes and 16 rejected controls | Two epochs at execution commit 144cd5e; integration only |
-| `acquisition-integration-05` | Nine policy/budget rounds and 27 original committee members independently checked | Shared initial pool, calibration and decisions reconstructed; no policy advantage established |
-| `secondary-integration-05` | Original MD22 model, 64 held-out geometries, eight probes and two trajectories totaling 32 steps | Separate electronic level and composition; two-epoch integration only |
-| `recovery-validation-06` | 295 tests pass, including actual SIGINT/SIGTERM child termination and exact CPU training recovery | Current recovery source; no CUDA recovery claim |
-| `integration-08` | Two original models, primary and temporal-slice predictions, 32 weight probes, eight steps and 16 rejected controls | Frozen execution commit 83d8df4; two-epoch integration only |
-| `guarded-integration-08` | Two separately trained temporal-block models and 16 saved-weight probes | Frozen execution commit 83d8df4; small guarded comparison |
-| `ablation-integration-08` | Five genuine interventions and 40 saved-weight probes independently verified | Frozen execution commit 83d8df4; no useful two-epoch learning claim |
-
-Source-05 has digest `5b76e3a555780cd63159b89db737a2207da6a727b887ab830a373d4546163cf1`.
-The small runs barely change force error. They establish wiring and artifact checks, not useful
-molecular accuracy. Current recovery edits require fresh execution before claiming a new bundle.
-
-Historical `frozen-diagnostic-03` belongs to execution commit
-`6a99cd8210752e2e32bd8bebad75057479eb964f`, source digest
-`7ca0c4acc802f7828c449d47db9f440be7860e274eaf8f1ed5257f6371d9a364`.
-Its six 100-epoch models, 2250 learned steps and 16 negative controls verified. Equivariant force
-MAE was 0.111071, 0.131622 and 0.129603 eV/angstrom, 84.9 to 87.1 percent below zero force.
-The 30-minute stress completed 187406 calls with 417398784 bytes sampled peak RSS and zero
-post-warmup growth. The exact checkout is retained at sibling `asterion-diagnostic-source`.
-Its bundle certifies that checkout only. Current executable edits invalidate reuse for new source.
-
-`learned-committee-03` gave held-out force MAE 0.097912 eV/angstrom, error-ranking Spearman
-0.6154 and observed coverage 0.9141 on 256 geometries. Its 252-geometry temporal slice gave MAE
-0.094420, ranking 0.6255 and coverage 0.9246. A calibrated-uncertainty trajectory completed
-100 steps. These observations do not establish acquisition advantage or chemical transfer.
-Older diagnostics, negative results and raw records remain retained in ignored local storage.
-
-## Outstanding gates
-
-Full execution is blocked on this Apple M2 host: CUDA is unavailable and the reference CUDA runtime is unavailable. No full 72-run primary campaign, 12 MACE retrainings, million-step dynamics,
-full acquisition/ablation population or MD22 long-horizon study has run. Full positive assembly,
-clean installations and package release have not been exercised against current source.
-
-Guarded comparison and temporal-slice raw validation, saved-checkpoint history/normalizer checks
-and raw ablation verification are implemented. The guarded CPU integration verified two saved models;
-five original ablation fixtures replay saved weights and reject altered summaries.
-Machine-readable coverage for all 32 capabilities and 12 gates, read-only frozen documentation
-validation, and verified-release packaging are implemented. The local 736-case suite passed,
-including archive corruption, failed publication, omitted-test and coverage controls. Full positive
-assembly and full release execution remain unverified. The CPU reference compatibility run, original resource pilot, acquisition
-viewer paths and uncertainty summary reconstruction are implemented and measured locally.
-A temporal slice of an
-arbitrarily sampled training pool does not establish a temporally guarded training comparison.
-
-No GitHub remote or hosted publication exists. The last account probe found an invalid Aneesh495
-keyring token. No paid resources were provisioned. Public publication needs a working account
-and direct user authorization; the attached brief alone does not supply it.
-
-Next: freeze source for a current learning diagnostic and clean builds.
-On suitable authorized hardware, run the unchanged full workload and verify its actual outputs.
-
-The retained `guarded-inputs-integration-23` executed seven managed stages at commit c7cc68d,
-with 688 tests and fourteen checks around frozen configuration and all twelve author inputs.
-Independent verification passed. Two isolated wheel installations for that execution source
-each passed 688 tests; their installed inventories matched the frozen source. Package membership
-checks excluded private accounting, author arrays and run storage. Raw initial install failures
-and corrected install logs remain retained. These are CPU diagnostics and package checks.
-
-The source-25 diagnostic retained six completed 100-epoch learners, nine learned trajectories
-and generated graph cases before being intentionally interrupted for a viewer defect. The browser
-showed unavailable uncertainty storage values as a zero curve. The renderer now uses the retained
-availability flags and leaves missing observations unplotted. That source-25 run is retained as an
-interrupted attempt, not current acceptance. Two source-25 isolated test attempts also retained
-failures from a relative interpreter launcher: a nested process normalized its path and therefore
-changed the fixture's immutable argv. The new freeze will use absolute interpreter paths without
-changing test expectations or weakening stage identity checks.
+No GitHub remote or hosted publication exists. No paid resources were provisioned.
+Publishing requires direct user authorization. The attached brief alone does not supply it.

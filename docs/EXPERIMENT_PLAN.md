@@ -60,3 +60,11 @@ heuristic and do not establish independent molecular conformations. The primary 
 slice separately oversamples permitted candidates, excludes every primary role and retains the
 exact declared count. That slice has no guard relative to its randomly sampled training labels;
 it cannot substitute for the separately trained guarded comparison.
+
+Committee shift endpoint: before acquisition decisions, choose `evaluation_size` distinct unused
+rows from the last quarter of original trajectory order, with fixed seed `trial + 9100`.
+Exclude the entire primary training pool and every selection/calibration/evaluation role.
+Freeze that slice across budgets and policies. Reuse the primary calibration without refitting.
+Report force-error ranking, empirical coverage and mean bound, with raw member predictions and
+source-selected saved-weight probes. A temporal suffix does not establish guarded training or
+prove distribution shift; negative or uninformative ranking remains a reported result.

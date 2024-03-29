@@ -11,6 +11,7 @@ from asterion.acquisition.analysis import (
     selected_diversity,
 )
 from asterion.acquisition.policy import choose
+from asterion.acquisition.shift import shifted_observation, temporal_slice
 from asterion.artifacts.io import atomic_npz, object_hash, write_json
 from asterion.data.dataset import load_rmd17
 from asterion.data.ledger import RevealLedger
@@ -37,11 +38,13 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                 config["validation_size"],
                 config["calibration_size"],
             )
+            shifted = temporal_slice(pool, split, config["evaluation_size"])
             descriptors = geometry_descriptors(pool, split.train_pool)
             budgets = config["acquisition_budgets"]
             initial = np.random.default_rng(trial).permutation(split.train_pool)[: budgets[0]]
             for policy in ("uniform", "diversity", "uncertainty-diversity"):
                 run = directory / f"{molecule}-{trial}-{policy}"
+                shifted.write(run / "shift-split.json")
                 ledger = RevealLedger(split, run / "reveal")
                 ledger.reveal(initial, "shared-initial-pool")
                 committee = None
@@ -157,6 +160,16 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                         component_std=output.force_component_std,
                         pointers=pointers,
                     )
+                    shift_report = shifted_observation(
+                        oracle,
+                        shifted,
+                        models,
+                        committee,
+                        calibration,
+                        config["batch_size"],
+                        run,
+                        round_index,
+                    )
                     calibration_evaluation = interval(calibration_started, time.perf_counter_ns())
                     candidate_started = time.perf_counter_ns()
                     disagreement = committee.infer([pool.geometry(row) for row in split.train_pool])
@@ -191,6 +204,7 @@ def acquisition_campaign(config, storage: Path, directory: Path):
                             "reveal": ledger.digest,
                             "metrics": metrics,
                             "uncertainty": uncertainty,
+                            "shift": shift_report,
                             "cost": cost,
                             "selected_diversity": diversity,
                             "completed_labels": len(ledger.revealed),

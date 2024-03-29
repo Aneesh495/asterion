@@ -3,10 +3,6 @@
 import time
 
 import numpy as np
-from asterion.evaluation.dynamics_statistics import (
-    analyze_trajectory,
-    matched_timestep_observations,
-)
 
 from asterion.artifacts.io import read_json, safe_member, write_json
 from asterion.artifacts.source import source_inputs
@@ -15,6 +11,10 @@ from asterion.contracts.units import thermal_velocities
 from asterion.data.dataset import load_rmd17
 from asterion.dynamics.integrator import SimulationConfig, simulate
 from asterion.dynamics.learned import LearnedEvaluator
+from asterion.evaluation.dynamics_statistics import (
+    analyze_trajectory,
+    matched_timestep_observations,
+)
 from asterion.training.campaign import load_split
 from asterion.training.checkpoint import load_checkpoint
 from asterion.training.identity import state_fingerprint

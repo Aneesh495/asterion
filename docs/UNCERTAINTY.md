@@ -78,3 +78,14 @@ does not imply unavailability. Independent replay rejects contradictory codes, c
 or metadata labels. The viewer uses that contract and labels calibrated bounds separately from
 sample disagreement. Force overlays share one display scale; generated frames have no reference
 labels, so reference/error overlays are disabled there.
+
+Each acquisition trial additionally freezes a temporal suffix drawn from the last quarter of the
+author's original trajectory order. It excludes the complete primary train pool, validation,
+calibration and held-out evaluation roles. All policies and rounds use the same frozen rows and
+the same geometry denominator as primary evaluation. The three saved members retain separate
+predictions, physical author labels, coordinates and checkpoint probes for that suffix.
+Calibration is reused unchanged; no shifted labels fit the multiplier or acquisition decisions.
+Ranking, empirical coverage and mean bounds are independently recomputed for both conditions.
+This is a disjoint temporal slice of a randomly sampled primary learner, not a temporally guarded
+training comparison or a guarantee of out-of-distribution examples. The separate guarded study
+retains its stronger information boundary.

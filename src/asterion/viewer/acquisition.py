@@ -96,6 +96,7 @@ def acquisition_payload(inputs: AcquisitionArtifacts | None):
                 "geometries": geometries,
                 "new_labels": len(reveal["rows"]),
                 "uncertainty": row["uncertainty"],
+                "shift": row["shift"],
                 "force_mae": float(
                     read_arrays(directory / f"uncertainty-evaluation-{row['round']}.npz")[
                         "errors"
@@ -112,6 +113,13 @@ def acquisition_payload(inputs: AcquisitionArtifacts | None):
                     "uncertainty_sha256": file_hash(
                         directory / f"uncertainty-evaluation-{row['round']}.npz"
                     ),
+                    "shift_split_sha256": file_hash(directory / "shift-split.json"),
+                    "shift_observations_sha256": file_hash(
+                        directory / row["shift"]["observations"]
+                    ),
+                    "shift_member_sha256": {
+                        name: file_hash(directory / name) for name in row["shift"]["members"]
+                    },
                     "cost_sha256": file_hash(directory / f"cost-{row['round']}.json"),
                     "checkpoints": checkpoints,
                 },

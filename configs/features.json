@@ -411,11 +411,14 @@
       "mechanism": "Independent three member committee and calibration",
       "source": [
         "src/asterion/uncertainty/committee.py",
-        "src/asterion/uncertainty/moments.py"
+        "src/asterion/uncertainty/moments.py",
+        "src/asterion/acquisition/shift.py",
+        "src/asterion/artifacts/committee_shift.py"
       ],
       "tests": [
         "tests/test_committee_contracts.py",
-        "tests/test_uncertainty_range.py"
+        "tests/test_uncertainty_range.py",
+        "tests/test_committee_shift.py"
       ],
       "stages": [
         "acquire"
